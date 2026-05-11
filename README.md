@@ -52,7 +52,7 @@ memcrate/
 One-liner for Linux and macOS:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/bradtraversy/memcrate/main/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/memcrate/memcrate/main/install.sh | sh
 ```
 
 Drops the `memcrate` binary into `/usr/local/bin` (with `sudo` if needed). Then:
@@ -70,20 +70,20 @@ You should end up with `~/vault/Core/Context/Profile.md`, `~/vault/Core/Sessions
 cargo install memcrate
 
 # Specific version
-MEMCRATE_VERSION=v0.1.0 curl -fsSL https://raw.githubusercontent.com/bradtraversy/memcrate/main/install.sh | sh
+MEMCRATE_VERSION=v0.1.0 curl -fsSL https://raw.githubusercontent.com/memcrate/memcrate/main/install.sh | sh
 
 # Custom install dir (no sudo needed)
-MEMCRATE_INSTALL_DIR=$HOME/.local/bin curl -fsSL https://raw.githubusercontent.com/bradtraversy/memcrate/main/install.sh | sh
+MEMCRATE_INSTALL_DIR=$HOME/.local/bin curl -fsSL https://raw.githubusercontent.com/memcrate/memcrate/main/install.sh | sh
 ```
 
-Pre-built binaries are also available on the [releases page](https://github.com/bradtraversy/memcrate/releases).
+Pre-built binaries are also available on the [releases page](https://github.com/memcrate/memcrate/releases).
 
 ### Connecting to your AI tool
 
 The CLI ships `init` today; the per-tool `install` command lands in a later v0.x release. Until then, link the skills manually for Claude Code:
 
 ```bash
-git clone https://github.com/bradtraversy/memcrate /tmp/memcrate-src
+git clone https://github.com/memcrate/memcrate /tmp/memcrate-src
 ln -s /tmp/memcrate-src/skills/claude-code/save ~/.claude/skills/save
 ln -s /tmp/memcrate-src/skills/claude-code/load ~/.claude/skills/load
 ln -s /tmp/memcrate-src/skills/claude-code/pin  ~/.claude/skills/pin

@@ -1,7 +1,7 @@
 #!/bin/sh
 # Memcrate installer.
 #
-#   curl -fsSL https://raw.githubusercontent.com/bradtraversy/memcrate/main/install.sh | sh
+#   curl -fsSL https://raw.githubusercontent.com/memcrate/memcrate/main/install.sh | sh
 #
 # Optional environment variables:
 #   MEMCRATE_VERSION      Specific version tag to install (default: latest).
@@ -10,7 +10,7 @@
 
 set -eu
 
-REPO="bradtraversy/memcrate"
+REPO="memcrate/memcrate"
 BIN_NAME="memcrate"
 
 err() { printf 'error: %s\n' "$*" >&2; exit 1; }
