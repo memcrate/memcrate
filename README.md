@@ -1,6 +1,6 @@
 # Memcrate
 
-> A portable, markdown-native, locally-owned personal context vault for AI tools. Three verbs. One folder. Any tool.
+> A portable, markdown-native, locally-owned personal context vault for AI tools. Three verbs. One vault. Any tool.
 
 **Status:** Phase 1. Skills, reference vault, and format spec are written. Manual install works. CLI (Phase 2) and MCP server (Phase 3) come later. Not yet announced — being dogfooded by the author.
 
@@ -8,9 +8,25 @@
 
 Every AI coding tool eventually loses context. Sessions end. Tools change. You start fresh in Cursor on Monday, then jump to Claude Code on Tuesday, then a Claude Desktop window for planning on Wednesday — and each one needs to be told from scratch what you're working on, what's been decided, what's broken, what's next.
 
-Memcrate is a local markdown directory plus three verbs (`/save`, `/pin`, `/load`) that any AI tool can read and write to. Your context lives in plain `.md` files you own. The verbs make the rituals consistent across tools.
+Memcrate is a local markdown vault plus three verbs (`/save`, `/pin`, `/load`) that any AI tool can read and write to. Your context lives in plain `.md` files you own. The verbs make the rituals consistent across tools.
 
-Read [docs/overview.md](docs/overview.md) for the full pitch and [docs/verbs.md](docs/verbs.md) for the verb contracts.
+## What your vault looks like
+
+```
+~/vault/
+├── README.md
+├── .memcrate                  # marker file (lets tools find this vault)
+└── Core/
+    ├── Context/
+    │   ├── Profile.md         # stable: who you are, tools, anti-goals
+    │   ├── Projects.md        # every project with status, stack
+    │   └── Current State.md   # living: this week's focus, deadlines
+    └── Sessions/              # /save writes session logs here
+```
+
+Four files inside `Core/`. That's the whole verbs surface — `/save`, `/pin`, and `/load` only read and write within `Core/`. Add optional folders alongside `Core/` (`Projects/`, `Daily/`, `Tasks/`, `Inbox/`) whenever you want the personal-OS scope.
+
+Read [docs/overview.md](docs/overview.md) for the full pitch, [docs/verbs.md](docs/verbs.md) for the verb contracts, and [docs/vault-structure.md](docs/vault-structure.md) for the structural details.
 
 ## Why not [other thing]
 
@@ -51,27 +67,13 @@ ln -s "$(pwd)/skills/claude-code/pin" ~/.claude/skills/pin
 echo 'export MEMCRATE_VAULT_PATH=~/vault' >> ~/.zshrc
 ```
 
-In a Claude Code session, type `/load` to get oriented, then start working. End the session with `/save`. When something becomes worth remembering forever, `/pin` it.
+You should end up with `~/vault/Core/Context/Profile.md`, `~/vault/Core/Sessions/`, and so on. In a Claude Code session, type `/load` to get oriented, then start working. End the session with `/save`. When something becomes worth remembering forever, `/pin` it.
 
 For other tools (Claude Desktop, Cursor, Aider) — see [docs/skills.md](docs/skills.md) for per-tool install steps. Phase 2 will collapse all of this into `memcrate install --all`.
 
-## What's in `reference-vault/`
+## About `reference-vault/`
 
-A starter vault. Everything the verbs need is inside `Core/`; the rest is yours to grow.
-
-```
-reference-vault/
-├── README.md
-├── .memcrate              # marker file (lets tools find the vault)
-└── Core/
-    ├── Context/
-    │   ├── Profile.md         # who you are, your tools, anti-goals, hard rules
-    │   ├── Projects.md        # every project with status, stack, milestones
-    │   └── Current State.md   # this week's focus, deadlines, recent decisions
-    └── Sessions/              # /save writes session logs here
-```
-
-Each canonical file has section guidance inline so you know what belongs where. Add optional folders (`Projects/`, `Daily/`, `Tasks/`, `Inbox/`) alongside `Core/` whenever you want the personal-OS scope — see [docs/vault-structure.md](docs/vault-structure.md).
+A starter vault scaffold (same shape as the "What your vault looks like" diagram above). Each canonical file has section guidance inline so you know what belongs where. Copy it anywhere, edit by hand, and start running the verbs against it.
 
 ## License
 
