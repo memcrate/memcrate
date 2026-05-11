@@ -2,7 +2,7 @@
 
 > A portable, markdown-native, locally-owned personal context vault for AI tools. Three verbs. One vault. Any tool.
 
-**Status:** Phase 1. Skills, reference vault, and format spec are written. Manual install works. CLI (Phase 2) and MCP server (Phase 3) come later. Not yet announced — being dogfooded by the author.
+**Status:** Phase 2 in progress. CLI v0.1 ships `memcrate init` (more commands — `install`, `update`, `status`, `doctor` — coming in subsequent v0.x releases). MCP server (Phase 3) comes later. Not yet announced — being dogfooded by the author.
 
 ## What this is
 
@@ -47,29 +47,52 @@ memcrate/
 └── docs/               # Format spec: overview, verbs, vault structure, skills, CLI
 ```
 
-## Manual install (Phase 1)
+## Install
 
-For Claude Code:
+One-liner for Linux and macOS:
 
 ```bash
-git clone https://github.com/bradtraversy/memcrate
-cd memcrate
+curl -fsSL https://raw.githubusercontent.com/bradtraversy/memcrate/main/install.sh | sh
+```
 
-# Pick a vault location and copy the starter files
-cp -r reference-vault ~/vault
+Drops the `memcrate` binary into `/usr/local/bin` (with `sudo` if needed). Then:
 
-# Symlink the Claude Code skills
-ln -s "$(pwd)/skills/claude-code/save" ~/.claude/skills/save
-ln -s "$(pwd)/skills/claude-code/load" ~/.claude/skills/load
-ln -s "$(pwd)/skills/claude-code/pin" ~/.claude/skills/pin
+```bash
+memcrate init ~/vault
+```
 
-# Optional — set the vault path env var so the verbs find your vault from anywhere
+You should end up with `~/vault/Core/Context/Profile.md`, `~/vault/Core/Sessions/`, and so on.
+
+### Other install paths
+
+```bash
+# From source
+cargo install memcrate
+
+# Specific version
+MEMCRATE_VERSION=v0.1.0 curl -fsSL https://raw.githubusercontent.com/bradtraversy/memcrate/main/install.sh | sh
+
+# Custom install dir (no sudo needed)
+MEMCRATE_INSTALL_DIR=$HOME/.local/bin curl -fsSL https://raw.githubusercontent.com/bradtraversy/memcrate/main/install.sh | sh
+```
+
+Pre-built binaries are also available on the [releases page](https://github.com/bradtraversy/memcrate/releases).
+
+### Connecting to your AI tool
+
+The CLI ships `init` today; the per-tool `install` command lands in a later v0.x release. Until then, link the skills manually for Claude Code:
+
+```bash
+git clone https://github.com/bradtraversy/memcrate /tmp/memcrate-src
+ln -s /tmp/memcrate-src/skills/claude-code/save ~/.claude/skills/save
+ln -s /tmp/memcrate-src/skills/claude-code/load ~/.claude/skills/load
+ln -s /tmp/memcrate-src/skills/claude-code/pin  ~/.claude/skills/pin
 echo 'export MEMCRATE_VAULT_PATH=~/vault' >> ~/.zshrc
 ```
 
-You should end up with `~/vault/Core/Context/Profile.md`, `~/vault/Core/Sessions/`, and so on. In a Claude Code session, type `/load` to get oriented, then start working. End the session with `/save`. When something becomes worth remembering forever, `/pin` it.
+In a Claude Code session, type `/load` to get oriented, then start working. End the session with `/save`. When something becomes worth remembering forever, `/pin` it.
 
-For other tools (Claude Desktop, Cursor, Aider) — see [docs/skills.md](docs/skills.md) for per-tool install steps. Phase 2 will collapse all of this into `memcrate install --all`.
+For other tools (Claude Desktop, Cursor, Aider) — see [docs/skills.md](docs/skills.md) for per-tool install steps.
 
 ## About `reference-vault/`
 

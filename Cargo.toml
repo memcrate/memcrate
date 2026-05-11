@@ -1,0 +1,36 @@
+[package]
+name = "memcrate"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.74"
+description = "Markdown-native personal context vault for AI tools — three verbs (/save, /pin, /load) over a portable local vault format."
+authors = ["Brad Traversy <traversymedia@gmail.com>"]
+license = "MIT"
+repository = "https://github.com/bradtraversy/memcrate"
+homepage = "https://memcrate.dev"
+documentation = "https://memcrate.dev"
+readme = "README.md"
+keywords = ["ai", "context", "vault", "claude", "memory"]
+categories = ["command-line-utilities"]
+include = [
+    "src/**/*",
+    "reference-vault/**/*",
+    "Cargo.toml",
+    "README.md",
+    "LICENSE",
+]
+
+[[bin]]
+name = "memcrate"
+path = "src/main.rs"
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+include_dir = "0.7"
+anyhow = "1"
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+strip = true

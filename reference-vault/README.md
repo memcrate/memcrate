@@ -1,6 +1,6 @@
 # Your Memcrate Vault
 
-> **Phase 1 placeholder.** This text gets replaced by `memcrate init` (Phase 2 CLI) or by you, manually, when you adopt this scaffold as your vault.
+> Edit this file to describe your vault. The text below is the Memcrate-shipped default — keep what's useful, change what isn't.
 
 ## What's in here
 

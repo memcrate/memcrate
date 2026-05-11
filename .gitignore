@@ -7,9 +7,9 @@
 .vscode/
 .idea/
 
-# Rust (Phase 2 — empty until then)
+# Rust
 target/
-Cargo.lock
+# Cargo.lock IS committed for the CLI (binary crate convention).
 
 # Node (if any tooling sneaks in)
 node_modules/
