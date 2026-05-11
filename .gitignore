@@ -1,0 +1,30 @@
+# macOS / Linux junk
+.DS_Store
+*.swp
+*.swo
+
+# Editor configs
+.vscode/
+.idea/
+
+# Rust (Phase 2 — empty until then)
+target/
+Cargo.lock
+
+# Node (if any tooling sneaks in)
+node_modules/
+.npm-cache/
+
+# Local env / secrets
+.env
+.env.local
+
+# Build output
+dist/
+build/
+
+# Local user vaults — if anyone runs `memcrate init` inside this repo
+# they should not commit their personal vault back. Reference vault is the
+# only vault that lives in this repo, and it lives at reference-vault/.
+/vault/
+/my-vault/
