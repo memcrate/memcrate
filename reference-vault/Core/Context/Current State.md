@@ -7,7 +7,7 @@ last_updated: YYYY-MM-DD
 
 > **This week's focus and the recent decisions log.**
 >
-> Updated weekly (by hand, by `/pin`, or both). Read by `/load` for orientation.
+> Kept fresh by `/pin` as you work and `/save` at the end of each session; hand-edit anytime. Read by `/load` for orientation at the start of every new session.
 
 ## This Week's Focus
 

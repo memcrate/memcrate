@@ -7,7 +7,7 @@ last_updated: YYYY-MM-DD
 
 > **Stable facts about you that change quarterly, not weekly.**
 >
-> This file is what `/load` reads first to understand who you are. Edit by hand or let `/pin` add to it.
+> This file is what `/load` reads first to understand who you are. The fastest way to populate it: start a session and tell your AI tool about yourself, then `/pin` the facts that should stick. Hand-editing also works — the section guidance below explains what belongs where.
 
 ## Identity
 

@@ -43,9 +43,13 @@ These are conventions, not requirements. `mkdir Projects` and you're done — th
 
 ## How to use
 
-End every AI-tool session with `/save`. Start every session with `/load`. When something graduates from "useful for this session" to "true forever," run `/pin <insight>`.
+Talk to your AI tool. Three verbs do the writing:
 
-Edit any file by hand whenever you want — the verbs are conveniences, not gates. The vault is yours.
+- `/load` — read your vault and reconstruct context at the start of a session.
+- `/save` — write a session log to `Core/Sessions/` at the end.
+- `/pin <insight>` — promote a fact into `Profile.md`, `Projects.md`, or `Current State.md` when it should stick across sessions.
+
+Hand-editing any file is fine too — the verbs are conveniences, not gates. The vault is yours.
 
 ## Read more
 

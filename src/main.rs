@@ -153,10 +153,16 @@ fn print_success(target: &Path, full: bool) {
     }
     println!();
     println!("Next:");
-    println!("  - Edit Core/Context/Profile.md to describe yourself.");
-    println!("  - Edit Core/Context/Projects.md to list your projects.");
-    println!("  - Install skills for your AI tool:");
-    println!("      memcrate install claude-code");
+    println!("  1. Install skills for your AI tool:");
+    println!("       memcrate install claude-code");
+    println!();
+    println!("  2. Start your AI tool and tell it about yourself and what");
+    println!("     you're working on. Use /pin when something is worth");
+    println!("     remembering forever — the skill writes it into");
+    println!("     Profile.md, Projects.md, or Current State.md for you.");
+    println!();
+    println!("Hand-editing the scaffolded files works too (they include");
+    println!("section guidance inline), but you should never *need* to.");
     println!();
     println!("Docs: https://memcrate.dev");
     println!();
