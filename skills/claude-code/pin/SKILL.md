@@ -19,14 +19,18 @@ After deciding the destination, restate which file you're about to edit before t
 
 ## Vault Location
 
-Resolve the vault path in this order (use the first one that exists):
+**Use the Read tool, not Bash.** Read handles `~` expansion and produces clean, recognizable permission prompts (one file at a time, full path visible).
 
-1. **`$MEMCRATE_VAULT_PATH`** environment variable — explicit override.
-2. **Current working directory** — if it contains `Profile.md` + `Projects.md` + `Current State.md`, or a `Core/Context/` folder containing them.
-3. **`~/vault/`** — Memcrate's default install path.
-4. **Walk parent directories** looking for a `.memcrate` marker file (similar to how `git` resolves repos).
+Try in order:
 
-Always expand `~` before editing (e.g. via bash). Never hardcode an absolute path.
+1. **Read `~/vault/Core/Context/Profile.md`** — the default install location. If Read returns content, the vault is `~/vault`.
+2. **Read `<cwd>/Core/Context/Profile.md`** — handles users who `cd`'d into their vault before launching Claude Code. Use the absolute working-directory path from your session context.
+
+If both reads fail, ask the user in plain English:
+
+> I couldn't find a Memcrate vault at `~/vault` or in this directory. Where is your vault? (Paste the absolute path. If you haven't set one up yet, run `memcrate init ~/vault` and try again.)
+
+Then `Read <answer>/Core/Context/Profile.md` to confirm before proceeding.
 
 The canonical context files always live at:
 

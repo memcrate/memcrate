@@ -99,11 +99,9 @@ Install the skills for Claude Code:
 memcrate install claude-code
 ```
 
-That drops `/save`, `/load`, `/pin` into `~/.claude/skills/`. Pass `--target <path>` to install elsewhere, or `--force` to overwrite an existing install. Point the verbs at your vault by exporting `MEMCRATE_VAULT_PATH`:
+That drops `/save`, `/load`, `/pin` into `~/.claude/skills/`. Pass `--target <path>` to install elsewhere, or `--force` to overwrite an existing install.
 
-```bash
-echo 'export MEMCRATE_VAULT_PATH=~/vault' >> ~/.zshrc
-```
+The skills look for your vault at `~/vault` by default. If your vault lives elsewhere, `cd` into it before launching Claude Code — the skills also check the current working directory. If neither matches, `/load` asks you in plain English where your vault is on first use.
 
 In a Claude Code session, type `/load` to get oriented, then start working. End the session with `/save`. When something becomes worth remembering forever, `/pin` it.
 

@@ -217,11 +217,10 @@ fn install_claude_code(target: Option<PathBuf>, force: bool) -> Result<()> {
     println!("  /pin    promote an insight into your permanent context files");
     println!();
     println!("Next:");
-    println!("  1. Point Claude Code at your vault:");
-    println!("       export MEMCRATE_VAULT_PATH=/path/to/your/vault");
-    println!("     (Skip if your vault is at ~/vault — the skills default to that.)");
+    println!("  1. Scaffold a vault if you don't have one yet:");
+    println!("       memcrate init ~/vault");
     println!();
-    println!("  2. Start Claude Code in any directory:");
+    println!("  2. Start Claude Code:");
     println!("       claude");
     println!();
     println!("  3. Inside the session, run /load first to get oriented.");
@@ -229,9 +228,10 @@ fn install_claude_code(target: Option<PathBuf>, force: bool) -> Result<()> {
     println!("     worth remembering forever.");
     println!();
     println!(
-        "First-time note: Claude Code will ask permission to run a Bash command\n\
-         the first time /load fires — that's the skill locating your vault.\n\
-         Approve it once and the rest of the session runs clean."
+        "First-time note: Claude Code will ask permission to read your vault's\n\
+         Profile.md the first time /load fires. The prompt will show the path\n\
+         (Read ~/vault/Core/Context/Profile.md). Approve it once and the rest\n\
+         of the session runs clean."
     );
     println!();
     Ok(())

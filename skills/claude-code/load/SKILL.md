@@ -19,14 +19,18 @@ Then proceed. If you discover something mid-load (e.g. "scoped mode for project 
 
 ## Vault Location
 
-Resolve the vault path in this order (use the first one that exists):
+**Use the Read tool, not Bash.** Read handles `~` expansion and produces clean, recognizable permission prompts (one file at a time, full path visible). Bash with shell expansion triggers harder-to-read permission prompts.
 
-1. **`$MEMCRATE_VAULT_PATH`** environment variable — explicit override.
-2. **Current working directory** — if it contains `Profile.md` + `Projects.md` + `Current State.md`, or a `Core/Context/` folder containing them.
-3. **`~/vault/`** — Memcrate's default install path.
-4. **Walk parent directories** looking for a `.memcrate` marker file (similar to how `git` resolves repos).
+Try in order:
 
-Always expand `~` before reading (e.g. via bash). Never hardcode an absolute path.
+1. **Read `~/vault/Core/Context/Profile.md`** — the default install location. If Read returns content, the vault is `~/vault`.
+2. **Read `<cwd>/Core/Context/Profile.md`** — handles users who `cd`'d into their vault before launching Claude Code. Use the absolute working-directory path from your session context.
+
+If both reads fail, ask the user in plain English:
+
+> I couldn't find a Memcrate vault at `~/vault` or in this directory. Where is your vault? (Paste the absolute path. If you haven't set one up yet, run `memcrate init ~/vault` and try again.)
+
+Then `Read <answer>/Core/Context/Profile.md` to confirm before proceeding.
 
 Canonical files always live at:
 
@@ -35,7 +39,7 @@ Canonical files always live at:
 - `<vault>/Core/Context/Current State.md`
 - `<vault>/Core/Sessions/`
 
-If any of these aren't found, the vault is malformed — surface that to the user rather than guessing alternate locations.
+If `Profile.md` exists but the others don't, the vault is malformed — surface that to the user rather than guessing alternate locations.
 
 ## What to Read
 
