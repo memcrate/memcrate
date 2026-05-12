@@ -4,8 +4,6 @@
 
 [![Crates.io](https://img.shields.io/crates/v/memcrate.svg)](https://crates.io/crates/memcrate) [![Downloads](https://img.shields.io/crates/d/memcrate.svg)](https://crates.io/crates/memcrate) [![Code: MIT](https://img.shields.io/badge/code-MIT-blue.svg)](LICENSE) [![Spec: CC0](https://img.shields.io/badge/spec-CC0-lightgrey.svg)](LICENSE-spec)
 
-**Status:** Phase 2 in progress. v0.3.1 ships `memcrate init`, `memcrate setup`, and `memcrate install` (more commands — `update`, `status`, `doctor` — coming in subsequent v0.x releases). MCP server (Phase 3) comes later. Not yet announced — being dogfooded by the author.
-
 ## What this is
 
 Every AI coding tool eventually loses context. Sessions end. Tools change. You start fresh in Cursor on Monday, then jump to Claude Code on Tuesday, then a Claude Desktop window for planning on Wednesday — and each one needs to be told from scratch what you're working on, what's been decided, what's broken, what's next.
