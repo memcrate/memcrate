@@ -49,13 +49,23 @@ memcrate/
 
 ## Install
 
-One-liner for Linux and macOS:
+**Linux and macOS** (one-liner):
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/memcrate/memcrate/main/install.sh | sh
 ```
 
-Drops the `memcrate` binary into `/usr/local/bin` (with `sudo` if needed). Then:
+Drops the `memcrate` binary into `/usr/local/bin` (with `sudo` if needed).
+
+**Windows** (PowerShell):
+
+```powershell
+irm https://raw.githubusercontent.com/memcrate/memcrate/main/install.ps1 | iex
+```
+
+Drops `memcrate.exe` into `%LOCALAPPDATA%\Programs\memcrate\` and adds it to your user PATH.
+
+Then on any platform:
 
 ```bash
 memcrate init ~/vault
@@ -69,14 +79,17 @@ You should end up with `~/vault/Core/Context/Profile.md`, `~/vault/Core/Sessions
 # From source (also the path for Intel Macs — see note below)
 cargo install memcrate
 
-# Specific version
+# Specific version (Linux/macOS)
 MEMCRATE_VERSION=v0.2.0 curl -fsSL https://raw.githubusercontent.com/memcrate/memcrate/main/install.sh | sh
+
+# Specific version (Windows)
+$env:MEMCRATE_VERSION="v0.2.0"; irm https://raw.githubusercontent.com/memcrate/memcrate/main/install.ps1 | iex
 
 # Custom install dir (no sudo needed)
 MEMCRATE_INSTALL_DIR=$HOME/.local/bin curl -fsSL https://raw.githubusercontent.com/memcrate/memcrate/main/install.sh | sh
 ```
 
-Pre-built binaries are also available on the [releases page](https://github.com/memcrate/memcrate/releases) — Linux x86_64 and macOS Apple Silicon. **Intel Macs:** install via `cargo install memcrate` (GitHub retired its free Intel macOS runner image in early 2026, so we no longer ship a pre-built Intel binary).
+Pre-built binaries on the [releases page](https://github.com/memcrate/memcrate/releases): Linux x86_64, macOS Apple Silicon, Windows x86_64. **Intel Macs:** install via `cargo install memcrate` (GitHub retired its free Intel macOS runner image in early 2026, so we no longer ship a pre-built Intel binary).
 
 ### Connecting to your AI tool
 

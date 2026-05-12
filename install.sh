@@ -27,17 +27,17 @@ detect_target() {
         Linux)
             case "$arch" in
                 x86_64|amd64) echo "x86_64-unknown-linux-gnu" ;;
-                *) err "unsupported Linux architecture: $arch (only x86_64 is published in v0.1)" ;;
+                *) err "unsupported Linux architecture: $arch (only x86_64 is published as a binary; try 'cargo install memcrate')" ;;
             esac
             ;;
         Darwin)
             case "$arch" in
-                x86_64) echo "x86_64-apple-darwin" ;;
                 arm64|aarch64) echo "aarch64-apple-darwin" ;;
+                x86_64) err "Intel Macs are not published as a binary; install via 'cargo install memcrate'" ;;
                 *) err "unsupported macOS architecture: $arch" ;;
             esac
             ;;
-        *) err "unsupported OS: $os (Linux and macOS are published in v0.1; Windows users see the docs at https://memcrate.dev)" ;;
+        *) err "unsupported OS: $os (Windows users: irm https://raw.githubusercontent.com/${REPO}/main/install.ps1 | iex)" ;;
     esac
 }
 
