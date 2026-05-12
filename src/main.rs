@@ -1,10 +1,11 @@
 use anyhow::{bail, Context, Result};
-use clap::{Parser, Subcommand};
+use clap::{Parser, Subcommand, ValueEnum};
 use include_dir::{include_dir, Dir};
 use std::fs;
 use std::path::{Path, PathBuf};
 
 static REFERENCE_VAULT: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/reference-vault");
+static SKILLS_CLAUDE_CODE: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/skills/claude-code");
 
 const OPTIONAL_FOLDERS: &[&str] = &["Projects", "Daily", "Tasks", "Inbox"];
 
@@ -35,12 +36,34 @@ enum Commands {
         #[arg(long)]
         force: bool,
     },
+
+    /// Install Memcrate skills for an AI tool.
+    Install {
+        /// Which tool to install skills for.
+        #[arg(value_enum)]
+        tool: Tool,
+
+        /// Override the default install path for the tool's skills.
+        #[arg(long)]
+        target: Option<PathBuf>,
+
+        /// Overwrite skills already installed at the target path.
+        #[arg(long)]
+        force: bool,
+    },
+}
+
+#[derive(Clone, Copy, ValueEnum)]
+enum Tool {
+    /// Claude Code (Anthropic's CLI). Installs to ~/.claude/skills/.
+    ClaudeCode,
 }
 
 fn main() -> Result<()> {
     let cli = Cli::parse();
     match cli.command {
         Commands::Init { path, full, force } => init(path, full, force),
+        Commands::Install { tool, target, force } => install(tool, target, force),
     }
 }
 
@@ -132,9 +155,81 @@ fn print_success(target: &Path, full: bool) {
     println!("Next:");
     println!("  - Edit Core/Context/Profile.md to describe yourself.");
     println!("  - Edit Core/Context/Projects.md to list your projects.");
-    println!("  - Install skills for your AI tool (coming in a later release):");
+    println!("  - Install skills for your AI tool:");
     println!("      memcrate install claude-code");
     println!();
     println!("Docs: https://memcrate.dev");
     println!();
+}
+
+fn install(tool: Tool, target: Option<PathBuf>, force: bool) -> Result<()> {
+    match tool {
+        Tool::ClaudeCode => install_claude_code(target, force),
+    }
+}
+
+fn install_claude_code(target: Option<PathBuf>, force: bool) -> Result<()> {
+    let dest = resolve_claude_skills_dir(target)?;
+    fs::create_dir_all(&dest)
+        .with_context(|| format!("Failed to create {}", dest.display()))?;
+
+    let skill_names: Vec<String> = SKILLS_CLAUDE_CODE
+        .dirs()
+        .filter_map(|d| {
+            d.path()
+                .file_name()
+                .map(|n| n.to_string_lossy().into_owned())
+        })
+        .collect();
+
+    let existing: Vec<String> = skill_names
+        .iter()
+        .filter(|n| dest.join(n).exists())
+        .cloned()
+        .collect();
+
+    if !existing.is_empty() && !force {
+        bail!(
+            "Skills already installed in {}: {}. Pass --force to overwrite.",
+            dest.display(),
+            existing.join(", ")
+        );
+    }
+
+    for name in &existing {
+        let p = dest.join(name);
+        fs::remove_dir_all(&p)
+            .with_context(|| format!("Failed to remove existing {}", p.display()))?;
+    }
+
+    SKILLS_CLAUDE_CODE
+        .extract(&dest)
+        .with_context(|| format!("Failed to extract skills to {}", dest.display()))?;
+
+    println!();
+    println!(
+        "Installed {} skill(s) for Claude Code to {}:",
+        skill_names.len(),
+        dest.display()
+    );
+    for name in &skill_names {
+        println!("  /{}", name);
+    }
+    println!();
+    println!("Restart Claude Code to pick up the new skills.");
+    println!();
+    Ok(())
+}
+
+fn resolve_claude_skills_dir(target: Option<PathBuf>) -> Result<PathBuf> {
+    match target {
+        Some(p) => Ok(p),
+        None => {
+            let home = std::env::var("HOME").context(
+                "Cannot resolve default Claude Code skills dir: HOME is not set. \
+                 Pass --target <path> to override.",
+            )?;
+            Ok(PathBuf::from(home).join(".claude").join("skills"))
+        }
+    }
 }
