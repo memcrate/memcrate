@@ -57,7 +57,9 @@ enum Commands {
 
     /// Populate Profile.md and Projects.md with a quick interactive wizard.
     Setup {
-        /// Path to the vault. Defaults to ~/vault.
+        /// Path to the vault. If omitted, looks for a vault in the current
+        /// directory, then walks up looking for a `.memcrate` marker, then
+        /// scans your home directory for a single vault.
         path: Option<PathBuf>,
 
         /// Overwrite Profile.md and Projects.md even if they've been hand-edited.
@@ -271,18 +273,76 @@ fn resolve_claude_skills_dir(target: Option<PathBuf>) -> Result<PathBuf> {
     }
 }
 
+fn resolve_setup_vault(path: Option<PathBuf>) -> Result<PathBuf> {
+    if let Some(p) = path {
+        return Ok(p);
+    }
+
+    if let Ok(cwd) = std::env::current_dir() {
+        if cwd.join(".memcrate").exists() {
+            return Ok(cwd);
+        }
+        let mut walk = cwd.as_path();
+        while let Some(parent) = walk.parent() {
+            if parent.join(".memcrate").exists() {
+                return Ok(parent.to_path_buf());
+            }
+            walk = parent;
+        }
+    }
+
+    if let Ok(home) = std::env::var("HOME") {
+        let home_path = PathBuf::from(&home);
+        let mut found: Vec<PathBuf> = Vec::new();
+        if let Ok(entries) = fs::read_dir(&home_path) {
+            for entry in entries.flatten() {
+                let p = entry.path();
+                if p.is_dir() && p.join(".memcrate").exists() {
+                    found.push(p);
+                }
+            }
+        }
+        found.sort();
+
+        match found.len() {
+            0 => {}
+            1 => return Ok(found.into_iter().next().unwrap()),
+            _ => {
+                let list: Vec<String> = found.iter().map(|p| format!("  {}", p.display())).collect();
+                bail!(
+                    "Multiple Memcrate vaults found in your home directory:\n{}\n\n\
+                     Pick one explicitly:\n  memcrate setup <path>",
+                    list.join("\n")
+                );
+            }
+        }
+
+        let default = home_path.join("vault");
+        if default.exists() {
+            return Ok(default);
+        }
+    }
+
+    bail!(
+        "No Memcrate vault found. Pass the vault path explicitly:\n  \
+         memcrate setup <path>\n\n\
+         Or scaffold a new vault first:\n  memcrate init ~/vault"
+    );
+}
+
 const IDENTITY_PLACEHOLDER: &str = "<!-- Who you are professionally. One paragraph. -->";
 const TOOLS_PLACEHOLDER: &str = "<!-- Editor, languages, runtimes, CLIs, default services. -->";
 const PROJECTS_DATE_PLACEHOLDER: &str = "last_updated: YYYY-MM-DD";
 
 fn setup(path: Option<PathBuf>, force: bool) -> Result<()> {
-    let vault = resolve_target(path)?;
+    let vault = resolve_setup_vault(path)?;
     let profile_path = vault.join("Core").join("Context").join("Profile.md");
     let projects_path = vault.join("Core").join("Context").join("Projects.md");
 
     if !profile_path.exists() || !projects_path.exists() {
         bail!(
-            "No Memcrate vault found at {}. Run `memcrate init {}` first.",
+            "Vault at {} is malformed: Core/Context/Profile.md or Projects.md \
+             is missing. Re-run `memcrate init {}` to repair the scaffold.",
             vault.display(),
             vault.display()
         );
