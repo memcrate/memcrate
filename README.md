@@ -68,10 +68,11 @@ Drops `memcrate.exe` into `%LOCALAPPDATA%\Programs\memcrate\` and adds it to you
 Then on any platform:
 
 ```bash
-memcrate init ~/vault
+memcrate init ~/vault          # scaffold the vault
+memcrate setup                 # optional: seed Profile.md + Projects.md from a few prompts
 ```
 
-You should end up with `~/vault/Core/Context/Profile.md`, `~/vault/Core/Sessions/`, and so on.
+You should end up with `~/vault/Core/Context/Profile.md`, `~/vault/Core/Sessions/`, and so on. The optional `setup` wizard asks you four questions (your name, what you do, tools you use, active projects) and writes the answers into the canonical files so `/load` has real context on day one. Skip it if you'd rather populate everything via `/pin` once you're in an AI tool.
 
 ### Other install paths
 

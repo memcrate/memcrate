@@ -1,6 +1,6 @@
 [package]
 name = "memcrate"
-version = "0.2.3"
+version = "0.3.0"
 edition = "2021"
 rust-version = "1.74"
 description = "Markdown-native personal context vault for AI tools — three verbs (/save, /pin, /load) over a portable local vault format."
@@ -29,6 +29,7 @@ path = "src/main.rs"
 clap = { version = "4", features = ["derive"] }
 include_dir = "0.7"
 anyhow = "1"
+time = { version = "0.3", features = ["formatting", "macros"] }
 
 [profile.release]
 opt-level = "z"

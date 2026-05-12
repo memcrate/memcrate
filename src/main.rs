@@ -2,7 +2,10 @@ use anyhow::{bail, Context, Result};
 use clap::{Parser, Subcommand, ValueEnum};
 use include_dir::{include_dir, Dir};
 use std::fs;
+use std::io::{self, BufRead, Write};
 use std::path::{Path, PathBuf};
+use time::macros::format_description;
+use time::OffsetDateTime;
 
 static REFERENCE_VAULT: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/reference-vault");
 static SKILLS_CLAUDE_CODE: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/skills/claude-code");
@@ -51,6 +54,16 @@ enum Commands {
         #[arg(long)]
         force: bool,
     },
+
+    /// Populate Profile.md and Projects.md with a quick interactive wizard.
+    Setup {
+        /// Path to the vault. Defaults to ~/vault.
+        path: Option<PathBuf>,
+
+        /// Overwrite Profile.md and Projects.md even if they've been hand-edited.
+        #[arg(long)]
+        force: bool,
+    },
 }
 
 #[derive(Clone, Copy, ValueEnum)]
@@ -64,6 +77,7 @@ fn main() -> Result<()> {
     match cli.command {
         Commands::Init { path, full, force } => init(path, full, force),
         Commands::Install { tool, target, force } => install(tool, target, force),
+        Commands::Setup { path, force } => setup(path, force),
     }
 }
 
@@ -153,15 +167,16 @@ fn print_success(target: &Path, full: bool) {
     }
     println!();
     println!("Next:");
-    println!("  1. Install skills for your AI tool:");
+    println!("  1. (Optional) Seed your Profile and Projects from a few prompts:");
+    println!("       memcrate setup");
+    println!();
+    println!("  2. Install skills for your AI tool:");
     println!("       memcrate install claude-code");
     println!();
-    println!("  2. Start your AI tool and tell it about yourself and what");
-    println!("     you're working on. Use /pin when something is worth");
-    println!("     remembering forever — the skill writes it into");
-    println!("     Profile.md, Projects.md, or Current State.md for you.");
+    println!("  3. Start your AI tool. Run /load first to get oriented;");
+    println!("     /pin facts as you work; /save the session at the end.");
     println!();
-    println!("Hand-editing the scaffolded files works too (they include");
+    println!("You can also hand-edit the scaffolded files (they include");
     println!("section guidance inline), but you should never *need* to.");
     println!();
     println!("Docs: https://memcrate.dev");
@@ -252,6 +267,224 @@ fn resolve_claude_skills_dir(target: Option<PathBuf>) -> Result<PathBuf> {
                  Pass --target <path> to override.",
             )?;
             Ok(PathBuf::from(home).join(".claude").join("skills"))
+        }
+    }
+}
+
+const IDENTITY_PLACEHOLDER: &str = "<!-- Who you are professionally. One paragraph. -->";
+const TOOLS_PLACEHOLDER: &str = "<!-- Editor, languages, runtimes, CLIs, default services. -->";
+const PROJECTS_DATE_PLACEHOLDER: &str = "last_updated: YYYY-MM-DD";
+
+fn setup(path: Option<PathBuf>, force: bool) -> Result<()> {
+    let vault = resolve_target(path)?;
+    let profile_path = vault.join("Core").join("Context").join("Profile.md");
+    let projects_path = vault.join("Core").join("Context").join("Projects.md");
+
+    if !profile_path.exists() || !projects_path.exists() {
+        bail!(
+            "No Memcrate vault found at {}. Run `memcrate init {}` first.",
+            vault.display(),
+            vault.display()
+        );
+    }
+
+    let profile_text = fs::read_to_string(&profile_path)
+        .with_context(|| format!("Failed to read {}", profile_path.display()))?;
+    let projects_text = fs::read_to_string(&projects_path)
+        .with_context(|| format!("Failed to read {}", projects_path.display()))?;
+
+    let profile_pristine = profile_text.contains(IDENTITY_PLACEHOLDER);
+    let projects_pristine = projects_text.contains("## Example Project");
+
+    if (!profile_pristine || !projects_pristine) && !force {
+        bail!(
+            "Profile.md or Projects.md has already been modified. \
+             Pass --force to overwrite, or hand-edit instead."
+        );
+    }
+
+    println!("Memcrate setup — populates Profile.md and Projects.md from your answers.");
+    println!("(Press Enter on any question to skip it. Ctrl-C aborts.)");
+    println!();
+    println!("Vault: {}", vault.display());
+    println!();
+
+    let name = prompt_line("Your name (or how you'd like to be referred to)")?;
+    let what_you_do = prompt_line("What do you do? (one short paragraph)")?;
+    let tools = prompt_line("Tools you always use (comma-separated)")?;
+    let projects = prompt_multiline("Active projects (one per line, blank line to finish)")?;
+
+    let today = today_iso();
+    let updated_profile = update_profile(&profile_text, &name, &what_you_do, &tools, &today);
+    let updated_projects = update_projects(&projects_text, &projects, &today);
+
+    fs::write(&profile_path, updated_profile)
+        .with_context(|| format!("Failed to write {}", profile_path.display()))?;
+    fs::write(&projects_path, updated_projects)
+        .with_context(|| format!("Failed to write {}", projects_path.display()))?;
+
+    println!();
+    println!("Updated:");
+    println!("  {}", profile_path.display());
+    println!("  {}", projects_path.display());
+    println!();
+    println!("Next:");
+    println!("  memcrate install claude-code");
+    println!("  claude");
+    println!("  /load   # your vault now has real context to load");
+    println!();
+
+    Ok(())
+}
+
+fn prompt_line(label: &str) -> Result<String> {
+    print!("{}:\n> ", label);
+    io::stdout().flush().ok();
+    let stdin = io::stdin();
+    let mut line = String::new();
+    stdin
+        .lock()
+        .read_line(&mut line)
+        .context("Failed to read from stdin")?;
+    println!();
+    Ok(line.trim().to_string())
+}
+
+fn prompt_multiline(label: &str) -> Result<Vec<String>> {
+    println!("{}:", label);
+    let stdin = io::stdin();
+    let mut lines = Vec::new();
+    loop {
+        print!("> ");
+        io::stdout().flush().ok();
+        let mut line = String::new();
+        let read = stdin
+            .lock()
+            .read_line(&mut line)
+            .context("Failed to read from stdin")?;
+        if read == 0 {
+            break;
+        }
+        let trimmed = line.trim();
+        if trimmed.is_empty() {
+            break;
+        }
+        lines.push(trimmed.to_string());
+    }
+    println!();
+    Ok(lines)
+}
+
+fn today_iso() -> String {
+    let now = OffsetDateTime::now_utc();
+    let fmt = format_description!("[year]-[month]-[day]");
+    now.format(fmt)
+        .unwrap_or_else(|_| "0000-00-00".to_string())
+}
+
+fn update_profile(text: &str, name: &str, what: &str, tools: &str, today: &str) -> String {
+    let mut out = text.to_string();
+
+    let identity = build_identity_section(name, what);
+    if !identity.is_empty() {
+        out = out.replace(IDENTITY_PLACEHOLDER, &identity);
+    }
+
+    let tools_block = build_tools_section(tools);
+    if !tools_block.is_empty() {
+        out = out.replace(TOOLS_PLACEHOLDER, &tools_block);
+    }
+
+    out = out.replacen(
+        PROJECTS_DATE_PLACEHOLDER,
+        &format!("last_updated: {}", today),
+        1,
+    );
+
+    out
+}
+
+fn build_identity_section(name: &str, what: &str) -> String {
+    let mut parts: Vec<String> = Vec::new();
+    if !name.is_empty() {
+        parts.push(format!("**{}**", name));
+    }
+    if !what.is_empty() {
+        parts.push(what.to_string());
+    }
+    parts.join("\n\n")
+}
+
+fn build_tools_section(tools: &str) -> String {
+    if tools.is_empty() {
+        return String::new();
+    }
+    tools
+        .split(',')
+        .map(|t| t.trim())
+        .filter(|t| !t.is_empty())
+        .map(|t| format!("- {}", t))
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+fn update_projects(text: &str, projects: &[String], today: &str) -> String {
+    let mut out = text.replacen(
+        PROJECTS_DATE_PLACEHOLDER,
+        &format!("last_updated: {}", today),
+        1,
+    );
+
+    if projects.is_empty() {
+        return out;
+    }
+
+    let new_sections: String = projects
+        .iter()
+        .map(|p| project_to_section(p))
+        .collect::<Vec<_>>()
+        .join("");
+
+    if let Some(start) = out.find("## Example Project") {
+        let next_h2 = out[start + 1..]
+            .find("\n## ")
+            .map(|i| start + 1 + i + 1)
+            .unwrap_or(out.len());
+        let before = &out[..start];
+        let after = &out[next_h2..];
+        out = format!("{}{}{}", before, new_sections, after);
+    } else {
+        if !out.ends_with('\n') {
+            out.push('\n');
+        }
+        out.push('\n');
+        out.push_str(&new_sections);
+    }
+
+    out
+}
+
+fn project_to_section(line: &str) -> String {
+    let line = line.trim();
+    let (name, desc) = if let Some((n, d)) = line.split_once(" — ") {
+        (n.trim(), Some(d.trim()))
+    } else if let Some((n, d)) = line.split_once(" - ") {
+        (n.trim(), Some(d.trim()))
+    } else if let Some((n, d)) = line.split_once(": ") {
+        (n.trim(), Some(d.trim()))
+    } else {
+        (line, None)
+    };
+
+    match desc {
+        Some(d) if !d.is_empty() => {
+            format!("## {}\n\n- **Type**: {}\n\n", name, d)
+        }
+        _ => {
+            format!(
+                "## {}\n\n<!-- /pin will add status, stack, decisions as you work. -->\n\n",
+                name
+            )
         }
     }
 }
