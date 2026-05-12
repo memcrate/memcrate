@@ -56,16 +56,19 @@ A vault folder is **not required** for a project — many projects have entries 
 
 ## Vault Location
 
-**Use the Read tool, not Bash.** Read handles `~` expansion and produces clean, recognizable permission prompts (one file at a time, full path visible).
+**Use Read and Glob, not Bash.** They produce clean permission prompts with full paths visible.
 
 Try in order:
 
-1. **Read `~/vault/Core/Context/Profile.md`** — the default install location. If Read returns content, the vault is `~/vault`.
+1. **Read `~/vault/Core/Context/Profile.md`** — the default install location. If Read returns content, `<vault>` = `~/vault`.
 2. **Read `<cwd>/Core/Context/Profile.md`** — handles users who `cd`'d into their vault before launching Claude Code. Use the absolute working-directory path from your session context.
+3. **Glob with `path: <home>` and `pattern: "*/Core/Context/Profile.md"`** — depth-1 scan of the user's home directory for vaults at custom paths like `~/myvault`. Resolve `<home>` from your session context (typically `/home/<user>` on Linux, `/Users/<user>` on macOS, `C:\Users\<user>` on Windows).
+    - **One match** → `<vault>` is the first path segment of that match (strip `/Core/Context/Profile.md`).
+    - **Multiple matches** → list them and ask the user which to use.
 
-If both reads fail, ask the user in plain English:
+If all three fail, ask the user in plain English:
 
-> I couldn't find a Memcrate vault at `~/vault` or in this directory. Where is your vault? (Paste the absolute path. If you haven't set one up yet, run `memcrate init ~/vault` and try again.)
+> I couldn't find a Memcrate vault at `~/vault`, in this directory, or anywhere one level deep in your home directory. Where is your vault? (Paste the absolute path. If you haven't set one up yet, run `memcrate init ~/vault` and try again.)
 
 Then `Read <answer>/Core/Context/Profile.md` to confirm before proceeding.
 
