@@ -7,6 +7,16 @@ description: "Load the user's operating context at the start of a session by rea
 
 Your job: load the user's persistent operating context from their Memcrate vault so you can work with full awareness of who they are, what they're building, and what happened in recent sessions. End with a short oriented summary and then wait for instructions.
 
+## Narrate before acting
+
+**Before any tool call, output a one-line status message to the user** so they understand what's about to happen. This matters because the first tool call (locating the vault) will trigger a permission prompt on a fresh install, and an unexplained bash prompt is jarring.
+
+Open with something like:
+
+> Loading your Memcrate context — checking for your vault, then reading Profile, Projects, Current State, and recent sessions.
+
+Then proceed. If you discover something mid-load (e.g. "scoped mode for project X" or "no session logs yet, falling back to general mode"), say that in one line before the next tool call. End with the formatted summary (see Output Format below).
+
 ## Vault Location
 
 Resolve the vault path in this order (use the first one that exists):

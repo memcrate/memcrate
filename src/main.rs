@@ -212,11 +212,27 @@ fn install_claude_code(target: Option<PathBuf>, force: bool) -> Result<()> {
         skill_names.len(),
         dest.display()
     );
-    for name in &skill_names {
-        println!("  /{}", name);
-    }
+    println!("  /load   load your vault context at the start of a session");
+    println!("  /save   save the current session as a structured log");
+    println!("  /pin    promote an insight into your permanent context files");
     println!();
-    println!("Restart Claude Code to pick up the new skills.");
+    println!("Next:");
+    println!("  1. Point Claude Code at your vault:");
+    println!("       export MEMCRATE_VAULT_PATH=/path/to/your/vault");
+    println!("     (Skip if your vault is at ~/vault — the skills default to that.)");
+    println!();
+    println!("  2. Start Claude Code in any directory:");
+    println!("       claude");
+    println!();
+    println!("  3. Inside the session, run /load first to get oriented.");
+    println!("     End the session with /save. Use /pin when something is");
+    println!("     worth remembering forever.");
+    println!();
+    println!(
+        "First-time note: Claude Code will ask permission to run a Bash command\n\
+         the first time /load fires — that's the skill locating your vault.\n\
+         Approve it once and the rest of the session runs clean."
+    );
     println!();
     Ok(())
 }

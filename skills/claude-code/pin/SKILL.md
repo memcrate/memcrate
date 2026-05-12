@@ -7,6 +7,16 @@ description: "Promote a specific insight, decision, or fact from the current con
 
 Your job: take a specific insight, decision, or fact and write it into the right permanent context file in the user's Memcrate vault. This is the bridge from *session memory* (the Sessions folder) to *permanent memory* (`Profile.md` / `Projects.md` / `Current State.md`).
 
+## Narrate before acting
+
+**Before any tool call, output a one-line status message to the user** so they understand what's about to happen — especially the first time `/pin` runs in a fresh install, when each new tool triggers a permission prompt.
+
+Open with something like:
+
+> Pinning this — figuring out which context file it belongs in (Profile / Projects / Current State), then updating it.
+
+After deciding the destination, restate which file you're about to edit before the Edit call.
+
 ## Vault Location
 
 Resolve the vault path in this order (use the first one that exists):

@@ -7,6 +7,16 @@ description: "Save the current session as a structured log in the user's Memcrat
 
 Your job: write a structured session log to the user's Memcrate vault capturing what happened, what was decided, what was learned, and what's pending. The goal is that `/load` in a future session can read this file and instantly reconstruct useful context.
 
+## Narrate before acting
+
+**Before any tool call, output a one-line status message to the user** so they understand what's about to happen — especially the first time `/save` runs in a fresh install, when each new tool (Bash, Write) triggers a permission prompt.
+
+Open with something like:
+
+> Saving this session — locating your vault, summarizing what we did, and writing a session log to Core/Sessions/.
+
+If you discover something mid-save (e.g. "writing scoped log for project X" or "no existing Sessions folder, creating one"), say that in one line before the next tool call.
+
 ## Optional Arguments
 
 The user can pass a label to scope the session log. The label can be a **project** or a **topic** — anything meaningful.
