@@ -84,14 +84,13 @@ try {
     $added = Add-ToUserPath $installDir
     if ($added) {
         Write-Info ""
-        Write-Info "Added $installDir to your user PATH. Open a new terminal to pick it up."
-    } else {
-        $sessionPath = $env:Path
-        if (-not ($sessionPath.Split(';') -contains $installDir)) {
-            Write-Info ""
-            Write-Info "Note: $installDir is on your user PATH but not this session. Open a new terminal, or run:"
-            Write-Info "  `$env:Path = `"$installDir;`$env:Path`""
-        }
+        Write-Info "Added $installDir to your user PATH (persists for new shells)."
+    }
+
+    # Also update the current session so `memcrate` works without opening a new terminal.
+    if (-not ($env:Path.Split(';') -contains $installDir)) {
+        $env:Path = "$installDir;$env:Path"
+        Write-Info "Updated PATH for this session — you can run `memcrate` right now."
     }
 
     Write-Info ""

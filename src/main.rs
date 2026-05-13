@@ -108,16 +108,20 @@ fn init(path: Option<PathBuf>, full: bool, force: bool) -> Result<()> {
     Ok(())
 }
 
+fn home_dir() -> Result<PathBuf> {
+    std::env::var("HOME")
+        .or_else(|_| std::env::var("USERPROFILE"))
+        .map(PathBuf::from)
+        .context(
+            "Cannot resolve home directory: neither HOME nor USERPROFILE is set. \
+             Pass an explicit path.",
+        )
+}
+
 fn resolve_target(path: Option<PathBuf>) -> Result<PathBuf> {
     match path {
         Some(p) => Ok(p),
-        None => {
-            let home = std::env::var("HOME").context(
-                "Cannot resolve default vault path: HOME environment variable is not set. \
-                 Pass an explicit path: memcrate init <path>",
-            )?;
-            Ok(PathBuf::from(home).join("vault"))
-        }
+        None => Ok(home_dir()?.join("vault")),
     }
 }
 
@@ -263,13 +267,7 @@ fn install_claude_code(target: Option<PathBuf>, force: bool) -> Result<()> {
 fn resolve_claude_skills_dir(target: Option<PathBuf>) -> Result<PathBuf> {
     match target {
         Some(p) => Ok(p),
-        None => {
-            let home = std::env::var("HOME").context(
-                "Cannot resolve default Claude Code skills dir: HOME is not set. \
-                 Pass --target <path> to override.",
-            )?;
-            Ok(PathBuf::from(home).join(".claude").join("skills"))
-        }
+        None => Ok(home_dir()?.join(".claude").join("skills")),
     }
 }
 
@@ -291,8 +289,7 @@ fn resolve_setup_vault(path: Option<PathBuf>) -> Result<PathBuf> {
         }
     }
 
-    if let Ok(home) = std::env::var("HOME") {
-        let home_path = PathBuf::from(&home);
+    if let Ok(home_path) = home_dir() {
         let mut found: Vec<PathBuf> = Vec::new();
         if let Ok(entries) = fs::read_dir(&home_path) {
             for entry in entries.flatten() {
