@@ -94,7 +94,7 @@ A label matches a project if either:
 - (a) it matches a `## <heading>` in `Projects.md`, OR
 - (b) it matches a folder anywhere under `Projects/` — at root *or* one level deep inside a bucket — excluding bucket names themselves (`Shelf`, `Ideas`, `Shipped`, `Archived`).
 
-Matching is **normalized**: lowercase both sides and strip whitespace, dots, and hyphens before comparing. So `myapp` ≈ `MyApp.ai`, `repo-triage` ≈ `RepoTriage`, `mission-control` ≈ `Mission Control`. Use substring containment for partial labels.
+Matching is **normalized**: lowercase both sides and strip whitespace, dots, and hyphens before comparing. So `myapp` ≈ `MyApp.ai`, `repo-triage` ≈ `RepoTriage`, `side-project` ≈ `Side Project`. Use substring containment for partial labels.
 
 If the label matches → treat as a project (write `projects: [<canonical-name>]` in the saved log's frontmatter, scope `/load` to project-related files first).
 

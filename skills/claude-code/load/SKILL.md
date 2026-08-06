@@ -76,7 +76,7 @@ A label matches a project if either:
 - (a) it matches a `## <heading>` in `Core/Context/Projects.md`, OR
 - (b) it matches a folder anywhere under `Projects/` — at root *or* one level deep inside a bucket — excluding the bucket names themselves (`Shelf`, `Ideas`, `Shipped`, `Archived`).
 
-Matching is **normalized**: lowercase both sides and strip whitespace, dots, and hyphens before comparing. So `myapp` ≈ `MyApp.ai`, `repo-triage` ≈ `RepoTriage`, `mission-control` ≈ `Mission Control`. Use substring containment for partial labels (`myapp` matches `myappai`).
+Matching is **normalized**: lowercase both sides and strip whitespace, dots, and hyphens before comparing. So `myapp` ≈ `MyApp.ai`, `repo-triage` ≈ `RepoTriage`, `side-project` ≈ `Side Project`. Use substring containment for partial labels (`myapp` matches `myappai`).
 
 If multiple projects match, ask the user to disambiguate. If nothing matches, treat as a topic.
 

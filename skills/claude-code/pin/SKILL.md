@@ -93,7 +93,7 @@ Within the target file, find the correct section. Examples:
 - New project status → `Core/Context/Projects.md` → that project's block
 - This week's priority → `Core/Context/Current State.md` → `## This Week's Focus` section
 - New anti-goal → `Core/Context/Profile.md` → `## Anti-goals` (or wherever the user keeps them)
-- New risk tolerance note → `Core/Context/Profile.md` → `## Personal Context` → Risk tolerance subsection
+- Working style or decision-making note → `Core/Context/Profile.md` → `## How I Work` section
 
 If the right section doesn't exist yet, ask the user whether to create it or where to put the content.
 

@@ -15,8 +15,8 @@ YYYY-MM-DD-<short-slug>.md
 
 Examples:
 
-- `2026-04-08-cpr-setup.md`
-- `2026-04-09-vidpipe-homepage-rewrite.md`
+- `2026-04-08-vault-setup.md`
+- `2026-04-09-myapp-homepage-rewrite.md`
 
 Multiple sessions same day: append `-2`, `-3`.
 
