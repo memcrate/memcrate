@@ -28,3 +28,8 @@ build/
 # only vault that lives in this repo, and it lives at reference-vault/.
 /vault/
 /my-vault/
+
+# leak-check tuning. Untracked on purpose: these hold private terms and
+# maintainer-specific exceptions that must never ship in a public repo.
+.leakcheck-ignore
+.leakcheck-extra

@@ -154,7 +154,9 @@ A starter vault scaffold (same shape as the "What your vault looks like" diagram
 
 ## Development
 
-`sh scripts/verify.sh` is the quality gate: fmt check, clippy (warnings deny), tests, build. The same script runs as a pre-push hook (wire it once per clone with `git config core.hooksPath .githooks`) and in CI on every push and pull request.
+`sh scripts/verify.sh` is the quality gate: leak check, fmt check, clippy (warnings deny), tests, build. The same script runs as a pre-push hook (wire it once per clone with `git config core.hooksPath .githooks`) and in CI on every push and pull request.
+
+The leak check exists because this repo's reference vault and skills are generalized from a real private vault. It blocks a push when a private project name, hostname, or absolute home path reaches a tracked file. Terms are read from the maintainer's local vault at runtime and are never committed here, so the check is a silent no-op on CI and on any other contributor's machine.
 
 ## License
 
