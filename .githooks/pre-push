@@ -1,0 +1,3 @@
+#!/bin/sh
+echo "pre-push: running scripts/verify.sh"
+exec sh scripts/verify.sh

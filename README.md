@@ -152,6 +152,10 @@ Pre-built binaries on the [releases page](https://github.com/memcrate/memcrate/r
 
 A starter vault scaffold (same shape as the "What your vault looks like" diagram above), shipped inside the CLI binary and extracted by `memcrate init`. Each canonical file has section guidance inline so AI tools know what belongs where when `/pin` writes to it. You can also copy `reference-vault/` directly into any directory if you'd rather skip the CLI.
 
+## Development
+
+`sh scripts/verify.sh` is the quality gate: fmt check, clippy (warnings deny), tests, build. The same script runs as a pre-push hook (wire it once per clone with `git config core.hooksPath .githooks`) and in CI on every push and pull request.
+
 ## License
 
 - Code (`skills/`, future CLI source, install scripts) — [MIT](LICENSE)
