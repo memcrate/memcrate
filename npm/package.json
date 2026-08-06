@@ -1,0 +1,43 @@
+{
+  "name": "memcrate",
+  "version": "0.4.0",
+  "description": "Markdown-native personal context vault for AI tools. Three verbs (/save, /pin, /load) over a portable local vault format.",
+  "keywords": [
+    "memcrate",
+    "ai",
+    "context",
+    "vault",
+    "claude",
+    "claude-code",
+    "codex",
+    "cursor",
+    "markdown",
+    "personal-context",
+    "memory"
+  ],
+  "homepage": "https://memcrate.dev",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/memcrate/memcrate.git",
+    "directory": "npm"
+  },
+  "bugs": {
+    "url": "https://github.com/memcrate/memcrate/issues"
+  },
+  "author": "Brad Traversy <traversymedia@gmail.com> (https://bradtraversy.dev)",
+  "license": "MIT",
+  "bin": {
+    "memcrate": "bin/memcrate.js"
+  },
+  "files": [
+    "bin/memcrate.js",
+    "scripts/postinstall.js",
+    "README.md"
+  ],
+  "scripts": {
+    "postinstall": "node scripts/postinstall.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

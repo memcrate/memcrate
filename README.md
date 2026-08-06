@@ -71,6 +71,12 @@ irm https://raw.githubusercontent.com/memcrate/memcrate/main/install.ps1 | iex
 
 Drops `memcrate.exe` into `%LOCALAPPDATA%\Programs\memcrate\` and adds it to your user PATH.
 
+**npm** (downloads the same prebuilt binary, no dependencies):
+
+```bash
+npm install -g memcrate
+```
+
 **Any platform with Rust** (also the path for Intel Macs):
 
 ```bash
