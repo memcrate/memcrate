@@ -2,15 +2,20 @@ use anyhow::{bail, Context, Result};
 use clap::{Parser, Subcommand, ValueEnum};
 use include_dir::{include_dir, Dir};
 use std::fs;
-use std::io::{self, BufRead, Write};
+use std::io::{self, BufRead, IsTerminal, Write};
 use std::path::{Path, PathBuf};
 use time::macros::format_description;
 use time::OffsetDateTime;
 
 static REFERENCE_VAULT: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/reference-vault");
-static SKILLS_CLAUDE_CODE: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/skills/claude-code");
+static AGENT_SKILLS: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/skills/agent");
 
 const OPTIONAL_FOLDERS: &[&str] = &["Projects", "Daily", "Tasks", "Inbox"];
+
+// Written into each installed skill folder so a later --force can tell which
+// skills Memcrate owns. Without it we would happily delete a same-named skill
+// the user wrote themselves.
+const SKILL_MARKER: &str = ".memcrate-skill";
 
 #[derive(Parser)]
 #[command(
@@ -42,15 +47,16 @@ enum Commands {
 
     /// Install Memcrate skills for an AI tool.
     Install {
-        /// Which tool to install skills for.
+        /// Which tool to install for. Omit to be asked.
         #[arg(value_enum)]
-        tool: Tool,
+        tool: Option<Tool>,
 
-        /// Override the default install path for the tool's skills.
+        /// Override the default install path. Only valid with a single tool.
         #[arg(long)]
         target: Option<PathBuf>,
 
-        /// Overwrite skills already installed at the target path.
+        /// Overwrite skills Memcrate previously installed. Never touches skills
+        /// it does not own.
         #[arg(long)]
         force: bool,
     },
@@ -68,10 +74,41 @@ enum Commands {
     },
 }
 
-#[derive(Clone, Copy, ValueEnum)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, ValueEnum)]
 enum Tool {
     /// Claude Code (Anthropic's CLI). Installs to ~/.claude/skills/.
     ClaudeCode,
+    /// Codex (OpenAI's CLI). Installs to ~/.codex/skills/.
+    Codex,
+    /// Every supported tool.
+    All,
+}
+
+impl Tool {
+    fn label(self) -> &'static str {
+        match self {
+            Tool::ClaudeCode => "Claude Code",
+            Tool::Codex => "Codex",
+            Tool::All => "all tools",
+        }
+    }
+
+    /// Where this tool loads user-level skills from.
+    fn skills_dir(self) -> Result<PathBuf> {
+        let home = home_dir()?;
+        Ok(match self {
+            Tool::ClaudeCode => home.join(".claude").join("skills"),
+            Tool::Codex => home.join(".codex").join("skills"),
+            Tool::All => bail!("Tool::All has no single skills directory"),
+        })
+    }
+
+    fn expand(self) -> Vec<Tool> {
+        match self {
+            Tool::All => vec![Tool::ClaudeCode, Tool::Codex],
+            t => vec![t],
+        }
+    }
 }
 
 fn main() -> Result<()> {
@@ -193,84 +230,161 @@ fn print_success(target: &Path, full: bool) {
     println!();
 }
 
-fn install(tool: Tool, target: Option<PathBuf>, force: bool) -> Result<()> {
-    match tool {
-        Tool::ClaudeCode => install_claude_code(target, force),
+fn install(tool: Option<Tool>, target: Option<PathBuf>, force: bool) -> Result<()> {
+    let selected = match tool {
+        Some(t) => t,
+        None => prompt_for_tool()?,
+    };
+
+    let tools = selected.expand();
+
+    if target.is_some() && tools.len() > 1 {
+        bail!("--target installs one tool at a time. Pick a single tool, or drop --target.");
     }
+
+    for t in tools {
+        let dest = match &target {
+            Some(p) => p.clone(),
+            None => t.skills_dir()?,
+        };
+        install_skills(t, &dest, force)?;
+    }
+
+    print_post_install();
+    Ok(())
 }
 
-fn install_claude_code(target: Option<PathBuf>, force: bool) -> Result<()> {
-    let dest = resolve_claude_skills_dir(target)?;
-    fs::create_dir_all(&dest).with_context(|| format!("Failed to create {}", dest.display()))?;
-
-    let skill_names: Vec<String> = SKILLS_CLAUDE_CODE
+fn skill_names() -> Vec<String> {
+    AGENT_SKILLS
         .dirs()
         .filter_map(|d| {
             d.path()
                 .file_name()
                 .map(|n| n.to_string_lossy().into_owned())
         })
-        .collect();
+        .collect()
+}
 
-    let existing: Vec<String> = skill_names
+/// A skill folder belongs to Memcrate if we marked it, or (for installs from
+/// versions before the marker existed) if its SKILL.md names Memcrate.
+fn is_memcrate_skill(dir: &Path) -> bool {
+    if dir.join(SKILL_MARKER).exists() {
+        return true;
+    }
+    fs::read_to_string(dir.join("SKILL.md"))
+        .map(|s| s.to_lowercase().contains("memcrate"))
+        .unwrap_or(false)
+}
+
+fn install_skills(tool: Tool, dest: &Path, force: bool) -> Result<()> {
+    fs::create_dir_all(dest).with_context(|| format!("Failed to create {}", dest.display()))?;
+
+    let names = skill_names();
+    let existing: Vec<String> = names
         .iter()
         .filter(|n| dest.join(n).exists())
         .cloned()
         .collect();
 
-    if !existing.is_empty() && !force {
+    let (ours, theirs): (Vec<String>, Vec<String>) = existing
+        .iter()
+        .cloned()
+        .partition(|n| is_memcrate_skill(&dest.join(n)));
+
+    // Never delete a skill someone else wrote, whatever flags we were given.
+    if !theirs.is_empty() {
         bail!(
-            "Skills already installed in {}: {}. Pass --force to overwrite.",
+            "{} already has skill(s) Memcrate did not install: {}.\n\n\
+             Memcrate will not overwrite skills it does not own, even with --force.\n\
+             Move or rename them first, or install elsewhere with --target <path>.",
             dest.display(),
-            existing.join(", ")
+            theirs.join(", ")
         );
     }
 
-    for name in &existing {
+    if !ours.is_empty() && !force {
+        bail!(
+            "Memcrate skills are already installed in {}: {}. Pass --force to update them.",
+            dest.display(),
+            ours.join(", ")
+        );
+    }
+
+    for name in &ours {
         let p = dest.join(name);
         fs::remove_dir_all(&p)
             .with_context(|| format!("Failed to remove existing {}", p.display()))?;
     }
 
-    SKILLS_CLAUDE_CODE
-        .extract(&dest)
+    AGENT_SKILLS
+        .extract(dest)
         .with_context(|| format!("Failed to extract skills to {}", dest.display()))?;
+
+    for name in &names {
+        let marker = dest.join(name).join(SKILL_MARKER);
+        fs::write(
+            &marker,
+            "Installed by Memcrate. Safe for `memcrate install --force` to replace.\n",
+        )
+        .with_context(|| format!("Failed to write {}", marker.display()))?;
+    }
 
     println!();
     println!(
-        "Installed {} skill(s) for Claude Code to {}:",
-        skill_names.len(),
+        "Installed {} skill(s) for {} to {}:",
+        names.len(),
+        tool.label(),
         dest.display()
     );
     println!("  /load   load your vault context at the start of a session");
     println!("  /save   save the current session as a structured log");
     println!("  /pin    promote an insight into your permanent context files");
+    Ok(())
+}
+
+fn print_post_install() {
     println!();
     println!("Next:");
     println!("  1. Scaffold a vault if you don't have one yet:");
     println!("       memcrate init ~/vault");
     println!();
-    println!("  2. Start Claude Code:");
-    println!("       claude");
-    println!();
-    println!("  3. Inside the session, run /load first to get oriented.");
+    println!("  2. Start your tool, then run /load first to get oriented.");
     println!("     End the session with /save. Use /pin when something is");
     println!("     worth remembering forever.");
     println!();
     println!(
-        "First-time note: Claude Code will ask permission to read your vault's\n\
+        "First-time note: your tool will ask permission to read your vault's\n\
          Profile.md the first time /load fires. The prompt will show the path\n\
-         (Read ~/vault/Core/Context/Profile.md). Approve it once and the rest\n\
-         of the session runs clean."
+         (~/vault/Core/Context/Profile.md). Approve it once and the rest of\n\
+         the session runs clean."
     );
     println!();
-    Ok(())
 }
 
-fn resolve_claude_skills_dir(target: Option<PathBuf>) -> Result<PathBuf> {
-    match target {
-        Some(p) => Ok(p),
-        None => Ok(home_dir()?.join(".claude").join("skills")),
+fn prompt_for_tool() -> Result<Tool> {
+    if !io::stdin().is_terminal() {
+        bail!(
+            "No tool given and nothing to prompt with. Pass one explicitly:\n  \
+             memcrate install claude-code\n  memcrate install codex\n  memcrate install all"
+        );
+    }
+
+    println!("Which AI tool should Memcrate install the /load, /save, and /pin skills for?");
+    println!();
+    println!("  1. Claude Code   (~/.claude/skills/)");
+    println!("  2. Codex         (~/.codex/skills/)");
+    println!("  3. Both");
+    println!();
+
+    loop {
+        let answer = prompt_line("Choose 1, 2, or 3")?;
+        match answer.trim() {
+            "1" => return Ok(Tool::ClaudeCode),
+            "2" => return Ok(Tool::Codex),
+            "3" => return Ok(Tool::All),
+            "" => println!("Pick 1, 2, or 3."),
+            other => println!("'{}' is not one of the options. Pick 1, 2, or 3.", other),
+        }
     }
 }
 
@@ -686,6 +800,64 @@ mod tests {
         assert_eq!(d.len(), 10);
         assert_eq!(&d[4..5], "-");
         assert_eq!(&d[7..8], "-");
+    }
+
+    #[test]
+    fn marker_file_marks_a_skill_as_ours() {
+        let dir = tmp("owned");
+        fs::write(dir.join("SKILL.md"), "unrelated content").unwrap();
+        assert!(!is_memcrate_skill(&dir));
+        fs::write(dir.join(SKILL_MARKER), "").unwrap();
+        assert!(is_memcrate_skill(&dir));
+    }
+
+    #[test]
+    fn pre_marker_installs_are_recognized_by_content() {
+        let dir = tmp("legacy");
+        fs::write(dir.join("SKILL.md"), "reads their Memcrate vault").unwrap();
+        assert!(is_memcrate_skill(&dir));
+    }
+
+    #[test]
+    fn a_users_own_skill_is_never_ours() {
+        let dir = tmp("foreign");
+        fs::write(
+            dir.join("SKILL.md"),
+            "---\nname: load\n---\nLoad from my Obsidian vault.",
+        )
+        .unwrap();
+        assert!(!is_memcrate_skill(&dir));
+    }
+
+    #[test]
+    fn missing_skill_md_is_not_ours() {
+        assert!(!is_memcrate_skill(&tmp("empty-skill")));
+    }
+
+    #[test]
+    fn all_expands_to_every_tool() {
+        assert_eq!(Tool::All.expand().len(), 2);
+        assert_eq!(Tool::Codex.expand(), vec![Tool::Codex]);
+    }
+
+    #[test]
+    fn each_tool_has_its_own_skills_dir() {
+        if std::env::var("HOME").is_err() && std::env::var("USERPROFILE").is_err() {
+            return;
+        }
+        let claude = Tool::ClaudeCode.skills_dir().unwrap();
+        let codex = Tool::Codex.skills_dir().unwrap();
+        assert!(claude.ends_with(".claude/skills"));
+        assert!(codex.ends_with(".codex/skills"));
+        assert_ne!(claude, codex);
+        assert!(Tool::All.skills_dir().is_err());
+    }
+
+    #[test]
+    fn bundled_skills_are_the_three_verbs() {
+        let mut names = skill_names();
+        names.sort();
+        assert_eq!(names, vec!["load", "pin", "save"]);
     }
 
     #[test]

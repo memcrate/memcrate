@@ -12,9 +12,21 @@ The skills are *ergonomic surfaces*, not the system itself. The system is the ma
 
 - **Location:** `~/.claude/skills/<verb>/SKILL.md`
 - **Format:** YAML frontmatter (`name`, `description`) + markdown instructions
-- **Install:** `memcrate install claude-code` symlinks `~/.claude/skills` to the vault's `Skills/Claude/` directory, or copies the three skill folders if symlink isn't supported.
+- **Install:** `memcrate install claude-code` writes the three skill folders, each embedded in the CLI binary at compile time (so it works offline).
 - **Invocation:** Type `/save`, `/pin`, `/load` in Claude Code.
-- **Behavior:** Claude Code auto-discovers skills in `~/.claude/skills/` on session start. No restart required when skills are added or updated (symlink path means vault edits propagate live).
+- **Behavior:** Claude Code auto-discovers skills in `~/.claude/skills/` on session start.
+
+## Codex
+
+- **Location:** `~/.codex/skills/<verb>/SKILL.md`
+- **Format:** identical to Claude Code. Codex reads the same `SKILL.md` shape, so Memcrate ships one canonical set of skills from `skills/agent/` and installs it to whichever tools you pick.
+- **Install:** `memcrate install codex`, or `memcrate install all` for both tools at once.
+- **Invocation:** Type `/save`, `/pin`, `/load` in Codex.
+- **Note:** the vault-discovery step names the concrete call for each tool (Glob for Claude Code, `ls -d` for Codex), because an explicit tool call is followed more reliably than an abstract instruction.
+
+### Skill ownership
+
+Installed skills get a `.memcrate-skill` marker file. `memcrate install --force` replaces only marked skills, so a skill you wrote yourself named `load`, `save`, or `pin` is never overwritten. Skills installed before the marker existed are still recognized by their content.
 
 ## Claude Desktop (Cowork)
 

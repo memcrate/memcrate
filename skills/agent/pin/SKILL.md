@@ -19,13 +19,15 @@ After deciding the destination, restate which file you're about to edit before t
 
 ## Vault Location
 
-**Use Read and Glob, not Bash.** They produce clean permission prompts with full paths visible.
+**Prefer your file-reading tools over shell commands where you have them.** They produce clean permission prompts with full paths visible.
 
 Try in order:
 
 1. **Read `~/vault/Core/Context/Profile.md`** — the default install location. If Read returns content, `<vault>` = `~/vault`.
-2. **Read `<cwd>/Core/Context/Profile.md`** — handles users who `cd`'d into their vault before launching Claude Code. Use the absolute working-directory path from your session context.
-3. **Glob with `path: <home>` and `pattern: "*/Core/Context/Profile.md"`** — depth-1 scan of the user's home directory for vaults at custom paths like `~/myvault`. Resolve `<home>` from your session context (typically `/home/<user>` on Linux, `/Users/<user>` on macOS, `C:\Users\<user>` on Windows).
+2. **Read `<cwd>/Core/Context/Profile.md`** — handles users who `cd`'d into their vault before launching the tool. Use the absolute working-directory path from your session context.
+3. **Depth-1 scan of the home directory** for `*/Core/Context/Profile.md`, which finds vaults at custom paths like `~/myvault`. Resolve `<home>` from your session context (typically `/home/<user>` on Linux, `/Users/<user>` on macOS, `C:\Users\<user>` on Windows).
+    - **Claude Code:** Glob with `path: <home>` and `pattern: "*/Core/Context/Profile.md"`.
+    - **Codex:** run `ls -d <home>/*/Core/Context/Profile.md 2>/dev/null`.
     - **One match** → `<vault>` is the first path segment of that match (strip `/Core/Context/Profile.md`).
     - **Multiple matches** → list them and ask the user which to use.
 

@@ -43,7 +43,7 @@ Memcrate is a personal context OS, not a memory tool. Your project catalog, dail
 memcrate/
 ├── reference-vault/    # Starter vault scaffold (Core/ + .memcrate marker) — copy anywhere
 ├── skills/             # Canonical SKILL.md files for each AI tool
-│   └── claude-code/    # /save, /load, /pin (installed via `memcrate install claude-code`)
+│   └── agent/          # /save, /load, /pin as SKILL.md (Claude Code + Codex)
 └── docs/               # Format spec: overview, verbs, vault structure, skills, CLI
 ```
 
@@ -113,15 +113,21 @@ Skip this step if you'd rather populate everything via `/pin` once you're in an 
 
 ### 4. Install skills for your AI tool
 
-For Claude Code:
-
 ```bash
-memcrate install claude-code
+memcrate install
 ```
 
-Drops `/load`, `/save`, and `/pin` into `~/.claude/skills/`. Pass `--target <path>` to install elsewhere or `--force` to overwrite an existing install. Restart Claude Code after installing so it picks up the new skills.
+Asks which tool you want, then drops `/load`, `/save`, and `/pin` into place. Claude Code and Codex both read the same `SKILL.md` format, so the same three skills work in either.
 
-Other tools (Claude Desktop, Cursor, Aider) — coming in later v0.x releases; see [docs/skills.md](docs/skills.md) for the planned shape.
+```bash
+memcrate install claude-code   # ~/.claude/skills/
+memcrate install codex         # ~/.codex/skills/
+memcrate install all           # both, no prompt
+```
+
+Pass `--target <path>` to install one tool somewhere else, or `--force` to update an existing Memcrate install. `--force` only ever replaces skills Memcrate itself installed. If you already have your own skill named `load`, `save`, or `pin`, it stops and tells you rather than overwriting your work.
+
+Other tools (Claude Desktop, Cursor, Aider) are coming in later v0.x releases; see [docs/skills.md](docs/skills.md) for the planned shape.
 
 ### 5. Use the verbs
 

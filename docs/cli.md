@@ -13,7 +13,7 @@ The CLI is Memcrate's install layer - it scaffolds vaults and distributes skills
 ```bash
 memcrate init [path]               # Scaffold a vault at path (default: ~/vault)
 memcrate setup [path]              # Populate Profile.md and Projects.md from 4 prompts
-memcrate install claude-code       # Install /save, /pin, /load skills for Claude Code
+memcrate install [tool]            # Install /save, /pin, /load skills (asks if tool omitted)
 ```
 
 ### `memcrate init [path]`
@@ -37,13 +37,19 @@ Interactive wizard that populates `Profile.md` and `Projects.md` from four short
 - Refuses to overwrite hand-edited files; `--force` overrides.
 - Only touches `Profile.md` and `Projects.md`. `Current State.md` and `Sessions/` are yours.
 
-### `memcrate install claude-code`
+### `memcrate install [tool]`
 
-Installs the bundled `/load`, `/save`, and `/pin` SKILL.md files to `~/.claude/skills/`.
+Installs the bundled `/load`, `/save`, and `/pin` SKILL.md files. Run it with no argument and it asks which tool you want.
 
-- `--target <path>` installs somewhere else.
-- `--force` overwrites an existing install. The skill folders are replaced wholesale, so local edits to installed skills are lost; keep custom behavior in your own fork of the skills instead.
+- `claude-code` installs to `~/.claude/skills/`.
+- `codex` installs to `~/.codex/skills/`.
+- `all` installs to both without prompting.
+- `--target <path>` installs somewhere else. Only valid with a single tool.
+- `--force` updates an existing Memcrate install. It replaces only skills carrying the `.memcrate-skill` marker, so a same-named skill you wrote yourself is never deleted; the command stops and names it instead. Local edits to Memcrate's own skills are still lost on `--force`, so keep custom behavior in your own copy.
 - The skills are embedded in the binary at compile time, so `install` works offline.
+- With no argument and no terminal to prompt on (a script or CI), it exits with an error listing the explicit forms rather than hanging.
+
+Claude Code and Codex read the same `SKILL.md` format, so both install from one canonical source in `skills/agent/`.
 
 ## Planned commands
 
