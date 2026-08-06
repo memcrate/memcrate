@@ -66,6 +66,19 @@ try {
         Throw-Err "download failed. Check that version '$version' has a release asset for '$target' at https://github.com/$Repo/releases"
     }
 
+    Write-Info "Verifying checksum"
+    $shaPath = "$archivePath.sha256"
+    try {
+        Invoke-WebRequest -Uri "$url.sha256" -OutFile $shaPath -UseBasicParsing
+    } catch {
+        Throw-Err "checksum download failed. Every release ships a .sha256 next to the archive; see https://github.com/$Repo/releases"
+    }
+    $expected = ((Get-Content $shaPath -Raw).Trim() -split '\s+')[0].ToLower()
+    $actual = (Get-FileHash $archivePath -Algorithm SHA256).Hash.ToLower()
+    if (-not $expected -or $expected -ne $actual) {
+        Throw-Err "checksum mismatch for $url : expected '$expected', got '$actual'. Refusing to install."
+    }
+
     Expand-Archive -Path $archivePath -DestinationPath $tmp -Force
 
     $extractedBin = Join-Path $tmp $BinName

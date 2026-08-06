@@ -88,6 +88,24 @@ main() {
         err "download failed. Check that version '$version' has a release asset for '$target' at https://github.com/${REPO}/releases"
     fi
 
+    info "Verifying checksum"
+    if ! curl --fail --silent --show-error --location "${url}.sha256" -o "$tmp/${BIN_NAME}.tar.gz.sha256"; then
+        err "checksum download failed. Every release ships a .sha256 next to the tarball; see https://github.com/${REPO}/releases"
+    fi
+
+    expected=$(cut -d' ' -f1 < "$tmp/${BIN_NAME}.tar.gz.sha256")
+    if command -v sha256sum >/dev/null 2>&1; then
+        actual=$(sha256sum "$tmp/${BIN_NAME}.tar.gz" | cut -d' ' -f1)
+    elif command -v shasum >/dev/null 2>&1; then
+        actual=$(shasum -a 256 "$tmp/${BIN_NAME}.tar.gz" | cut -d' ' -f1)
+    else
+        err "cannot verify checksum: neither sha256sum nor shasum is available"
+    fi
+
+    if [ -z "$expected" ] || [ "$expected" != "$actual" ]; then
+        err "checksum mismatch for $url: expected '$expected', got '$actual'. Refusing to install."
+    fi
+
     tar -xzf "$tmp/${BIN_NAME}.tar.gz" -C "$tmp"
 
     if [ ! -f "$tmp/${BIN_NAME}" ]; then
