@@ -131,7 +131,7 @@ Start an AI tool session in or near your vault, then:
 - **`/pin <insight>`** — promote a fact into `Profile.md`, `Projects.md`, or `Current State.md` so it survives across sessions.
 - **`/save`** — write a session log to `Core/Sessions/` when you're done so the next `/load` can pick up where this one left off.
 
-The skills look for your vault by reading `~/vault/Core/Context/Profile.md` first, then the current working directory. If neither matches, `/load` asks you in plain English where your vault is on first use.
+The skills look for your vault by reading `~/vault/Core/Context/Profile.md` first, then the current working directory, then a depth-1 scan of your home directory (so custom paths like `~/myvault` are found automatically). If nothing matches, `/load` asks you in plain English where your vault is on first use.
 
 ## Advanced install options
 
