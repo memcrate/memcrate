@@ -78,7 +78,11 @@ fn main() -> Result<()> {
     let cli = Cli::parse();
     match cli.command {
         Commands::Init { path, full, force } => init(path, full, force),
-        Commands::Install { tool, target, force } => install(tool, target, force),
+        Commands::Install {
+            tool,
+            target,
+            force,
+        } => install(tool, target, force),
         Commands::Setup { path, force } => setup(path, force),
     }
 }
@@ -197,8 +201,7 @@ fn install(tool: Tool, target: Option<PathBuf>, force: bool) -> Result<()> {
 
 fn install_claude_code(target: Option<PathBuf>, force: bool) -> Result<()> {
     let dest = resolve_claude_skills_dir(target)?;
-    fs::create_dir_all(&dest)
-        .with_context(|| format!("Failed to create {}", dest.display()))?;
+    fs::create_dir_all(&dest).with_context(|| format!("Failed to create {}", dest.display()))?;
 
     let skill_names: Vec<String> = SKILLS_CLAUDE_CODE
         .dirs()
@@ -305,7 +308,8 @@ fn resolve_setup_vault(path: Option<PathBuf>) -> Result<PathBuf> {
             0 => {}
             1 => return Ok(found.into_iter().next().unwrap()),
             _ => {
-                let list: Vec<String> = found.iter().map(|p| format!("  {}", p.display())).collect();
+                let list: Vec<String> =
+                    found.iter().map(|p| format!("  {}", p.display())).collect();
                 bail!(
                     "Multiple Memcrate vaults found in your home directory:\n{}\n\n\
                      Pick one explicitly:\n  memcrate setup <path>",
@@ -435,8 +439,7 @@ fn prompt_multiline(label: &str) -> Result<Vec<String>> {
 fn today_iso() -> String {
     let now = OffsetDateTime::now_utc();
     let fmt = format_description!("[year]-[month]-[day]");
-    now.format(fmt)
-        .unwrap_or_else(|_| "0000-00-00".to_string())
+    now.format(fmt).unwrap_or_else(|_| "0000-00-00".to_string())
 }
 
 fn update_profile(text: &str, name: &str, what: &str, tools: &str, today: &str) -> String {
@@ -530,7 +533,11 @@ fn project_to_section(line: &str) -> String {
     } else if let Some((n, d)) = line.split_once(": ") {
         (n.trim(), Some(d.trim()))
     } else {
-        (line, None)
+        // "MyApp:" or "MyApp -" with nothing after: drop the dangling separator.
+        (
+            line.trim_end_matches([':', '-', '\u{2014}']).trim_end(),
+            None,
+        )
     };
 
     match desc {
@@ -543,5 +550,165 @@ fn project_to_section(line: &str) -> String {
                 name
             )
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn tmp(name: &str) -> PathBuf {
+        let dir =
+            std::env::temp_dir().join(format!("memcrate-test-{}-{}", std::process::id(), name));
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(&dir).unwrap();
+        dir
+    }
+
+    #[test]
+    fn project_section_em_dash_separator() {
+        let s = project_to_section("MyApp \u{2014} a thing I build");
+        assert_eq!(s, "## MyApp\n\n- **Type**: a thing I build\n\n");
+    }
+
+    #[test]
+    fn project_section_hyphen_separator() {
+        let s = project_to_section("MyApp - a thing I build");
+        assert_eq!(s, "## MyApp\n\n- **Type**: a thing I build\n\n");
+    }
+
+    #[test]
+    fn project_section_colon_separator() {
+        let s = project_to_section("MyApp: a thing I build");
+        assert_eq!(s, "## MyApp\n\n- **Type**: a thing I build\n\n");
+    }
+
+    #[test]
+    fn project_section_bare_name_gets_placeholder() {
+        let s = project_to_section("MyApp");
+        assert!(s.starts_with("## MyApp\n\n<!--"));
+    }
+
+    #[test]
+    fn project_section_dangling_separator_gets_clean_placeholder() {
+        for input in ["MyApp: ", "MyApp:", "MyApp -", "MyApp \u{2014}"] {
+            let s = project_to_section(input);
+            assert!(s.starts_with("## MyApp\n\n<!--"), "input: {:?}", input);
+        }
+    }
+
+    #[test]
+    fn tools_section_splits_and_skips_blanks() {
+        assert_eq!(
+            build_tools_section("vim, rust,  ,go"),
+            "- vim\n- rust\n- go"
+        );
+        assert_eq!(build_tools_section(""), "");
+    }
+
+    #[test]
+    fn identity_section_variants() {
+        assert_eq!(build_identity_section("Brad", ""), "**Brad**");
+        assert_eq!(build_identity_section("", "I teach"), "I teach");
+        assert_eq!(
+            build_identity_section("Brad", "I teach"),
+            "**Brad**\n\nI teach"
+        );
+        assert_eq!(build_identity_section("", ""), "");
+    }
+
+    #[test]
+    fn update_profile_fills_placeholders_and_date() {
+        let text = format!(
+            "---\n{}\n---\n\n{}\n\n{}\n",
+            PROJECTS_DATE_PLACEHOLDER, IDENTITY_PLACEHOLDER, TOOLS_PLACEHOLDER
+        );
+        let out = update_profile(&text, "Brad", "I teach", "vim, rust", "2026-08-06");
+        assert!(out.contains("last_updated: 2026-08-06"));
+        assert!(out.contains("**Brad**\n\nI teach"));
+        assert!(out.contains("- vim\n- rust"));
+        assert!(!out.contains(IDENTITY_PLACEHOLDER));
+        assert!(!out.contains(TOOLS_PLACEHOLDER));
+    }
+
+    #[test]
+    fn update_profile_skipped_answers_keep_placeholders() {
+        let text = format!("{}\n{}\n", IDENTITY_PLACEHOLDER, TOOLS_PLACEHOLDER);
+        let out = update_profile(&text, "", "", "", "2026-08-06");
+        assert!(out.contains(IDENTITY_PLACEHOLDER));
+        assert!(out.contains(TOOLS_PLACEHOLDER));
+    }
+
+    #[test]
+    fn update_projects_replaces_example_and_keeps_next_section() {
+        let text = format!(
+            "{}\n\n## Example Project\n\n- **Type**: sample\n\n## Keep Me\n\ncontent\n",
+            PROJECTS_DATE_PLACEHOLDER
+        );
+        let projects = vec!["App One: first".to_string(), "App Two".to_string()];
+        let out = update_projects(&text, &projects, "2026-08-06");
+        assert!(out.contains("last_updated: 2026-08-06"));
+        assert!(!out.contains("## Example Project"));
+        assert!(out.contains("## App One\n\n- **Type**: first"));
+        assert!(out.contains("## App Two"));
+        assert!(out.contains("## Keep Me\n\ncontent"));
+    }
+
+    #[test]
+    fn update_projects_replaces_example_when_last_section() {
+        let text = format!(
+            "{}\n\n## Example Project\n\n- **Type**: sample\n",
+            PROJECTS_DATE_PLACEHOLDER
+        );
+        let out = update_projects(&text, &["App".to_string()], "2026-08-06");
+        assert!(!out.contains("## Example Project"));
+        assert!(out.contains("## App"));
+    }
+
+    #[test]
+    fn update_projects_appends_when_no_example_heading() {
+        let out = update_projects("# Projects", &["App".to_string()], "2026-08-06");
+        assert!(out.starts_with("# Projects\n"));
+        assert!(out.contains("## App"));
+    }
+
+    #[test]
+    fn update_projects_empty_list_only_updates_date() {
+        let text = format!("{}\n\n## Example Project\n", PROJECTS_DATE_PLACEHOLDER);
+        let out = update_projects(&text, &[], "2026-08-06");
+        assert!(out.contains("last_updated: 2026-08-06"));
+        assert!(out.contains("## Example Project"));
+    }
+
+    #[test]
+    fn today_iso_shape() {
+        let d = today_iso();
+        assert_eq!(d.len(), 10);
+        assert_eq!(&d[4..5], "-");
+        assert_eq!(&d[7..8], "-");
+    }
+
+    #[test]
+    fn ensure_writable_ok_for_missing_or_empty() {
+        let dir = tmp("empty");
+        assert!(ensure_writable(&dir.join("does-not-exist"), false).is_ok());
+        assert!(ensure_writable(&dir, false).is_ok());
+    }
+
+    #[test]
+    fn ensure_writable_rejects_non_empty_without_force() {
+        let dir = tmp("nonempty");
+        fs::write(dir.join("file.txt"), "x").unwrap();
+        assert!(ensure_writable(&dir, false).is_err());
+        assert!(ensure_writable(&dir, true).is_ok());
+    }
+
+    #[test]
+    fn ensure_writable_rejects_existing_vault_without_force() {
+        let dir = tmp("vault");
+        fs::write(dir.join(".memcrate"), "").unwrap();
+        let err = ensure_writable(&dir, false).unwrap_err().to_string();
+        assert!(err.contains("--force"));
+        assert!(ensure_writable(&dir, true).is_ok());
     }
 }
