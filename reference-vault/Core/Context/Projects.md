@@ -16,6 +16,6 @@ last_updated: YYYY-MM-DD
 - **Type**: One-liner describing what this project is
 - **Status**: Active / Shelved / Shipped / Archived
 - **Stack**: Languages, frameworks, services
-- **Code path**: `~/Code/<project>/` if applicable
+- **Code path**: `~/Code/<bucket>/<project>/` if applicable
 - **Repo**: GitHub URL if applicable
 - **Next actions**: What's next on this project
