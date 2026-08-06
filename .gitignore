@@ -31,5 +31,6 @@ build/
 
 # leak-check tuning. Untracked on purpose: these hold private terms and
 # maintainer-specific exceptions that must never ship in a public repo.
+.leakcheck-vault
 .leakcheck-ignore
 .leakcheck-extra

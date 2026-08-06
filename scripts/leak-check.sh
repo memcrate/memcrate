@@ -5,16 +5,22 @@
 # private name is ever committed here. Machines without that vault (CI, other
 # contributors) skip the check entirely.
 #
-# Tune locally with two optional untracked files at the repo root:
+# Configure locally with untracked files at the repo root (or env vars):
+#   .leakcheck-vault    path to the private vault, one line
 #   .leakcheck-ignore   terms to skip, one per line
 #   .leakcheck-extra    additional terms to block, one per line
+#
+# The vault path is never hardcoded here: naming it would itself be a leak.
 set -eu
 
-VAULT="${TRAVERSY_LAB_PATH:-$HOME/Documents/Traversy Lab}"
-PROJECTS="$VAULT/Core/Context/Projects.md"
+VAULT="${LEAKCHECK_VAULT:-}"
+if [ -z "$VAULT" ] && [ -f .leakcheck-vault ]; then
+    VAULT=$(head -1 .leakcheck-vault)
+fi
 
-if [ ! -f "$PROJECTS" ]; then
-    echo "leak-check: no local vault found, skipping"
+PROJECTS="$VAULT/Core/Context/Projects.md"
+if [ -z "$VAULT" ] || [ ! -f "$PROJECTS" ]; then
+    echo "leak-check: no local vault configured, skipping"
     exit 0
 fi
 
@@ -26,8 +32,8 @@ trap 'rm -f "$terms" "$ignore"' EXIT
 lower() { tr 'A-Z' 'a-z'; }
 
 # Each project heading becomes several spellings: the literal name, a kebab
-# slug, a squashed form, and for domain-style names the part before the dot
-# (Vidpipe.ai leaks as "vidpipe", not "vidpipe.ai").
+# slug, a squashed form, and for domain-style names the part before the dot,
+# since a name like Example.io leaks in prose as plain "example".
 sed -n 's/^## //p' "$PROJECTS" | lower | while IFS= read -r name; do
     [ -n "$name" ] || continue
     printf '%s\n' "$name"
@@ -54,7 +60,7 @@ while IFS= read -r term; do
     [ -n "$term" ] || continue
     [ "${#term}" -ge "$MIN_LEN" ] || continue
     grep -qxF "$term" "$ignore" && continue
-    found=$(git grep -n -i -I -w -F -- "$term" -- . ':!scripts/leak-check.sh' 2>/dev/null || true)
+    found=$(git grep -n -i -I -w -F -- "$term" 2>/dev/null || true)
     if [ -n "$found" ]; then
         echo "leak-check: private term '$term' found in tracked files:"
         printf '%s\n' "$found" | sed 's/^/    /'
@@ -63,7 +69,7 @@ while IFS= read -r term; do
 done < "$terms"
 
 # Absolute home paths are a leak regardless of the vault.
-paths=$(git grep -n -I -E -- '/home/[a-z]|/Users/[a-z]|C:\\Users\\[a-z]' -- . ':!scripts/leak-check.sh' 2>/dev/null || true)
+paths=$(git grep -n -I -E -- '/home/[a-z]|/Users/[a-z]|C:\\Users\\[a-z]' 2>/dev/null || true)
 if [ -n "$paths" ]; then
     echo "leak-check: absolute home path in tracked files:"
     printf '%s\n' "$paths" | sed 's/^/    /'
