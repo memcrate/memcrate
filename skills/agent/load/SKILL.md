@@ -1,6 +1,6 @@
 ---
 name: load
-description: "Load the user's operating context at the start of a session by reading their Memcrate vault (Profile, Projects, Current State, and recent session logs). Output a short oriented summary, then wait for instructions. Invoke proactively on the first user message of any fresh session before substantive work, even if the message seems self-contained, so you have full context from turn 1. Also invoke whenever the user runs /load or asks you to load context. Skip only if context has already been loaded this session or the message is purely conversational with no task implication."
+description: "Load the user's operating context at the start of a session by reading their Memcrate vault (Profile, Projects, Current State, and recent session logs). Output a short oriented summary, then wait for instructions. Invoke proactively on the first user message of any fresh session before substantive work, even if the message seems self-contained, so you have full context from turn 1. Also invoke whenever the user runs /load or $load, or asks you to load context. Skip only if context has already been loaded this session or the message is purely conversational with no task implication."
 ---
 
 # load - Load Operating Context

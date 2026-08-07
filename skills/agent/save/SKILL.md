@@ -1,6 +1,6 @@
 ---
 name: save
-description: "Save the current session as a structured log in the user's Memcrate vault so future sessions can pick up where this one left off. Invoke whenever the user runs /save or tells you to save the session or wrap up. Writes a properly formatted session log following the Memcrate session schema."
+description: "Save the current session as a structured log in the user's Memcrate vault so future sessions can pick up where this one left off. Invoke whenever the user runs /save or $save, or tells you to save the session or wrap up. Writes a properly formatted session log following the Memcrate session schema."
 ---
 
 # save - Write Session Log

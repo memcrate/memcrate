@@ -160,12 +160,14 @@ fn run(cli: Cli) -> Result<()> {
 
     println!();
     println!("You now have three verbs in {}:", tool_list(installed));
-    println!("  /load   read your vault and get oriented. Run this first.");
-    println!("  /pin    promote a fact into your permanent context files.");
-    println!("  /save   write a session log before you finish.");
+    println!("  load   read your vault and get oriented. Run this first.");
+    println!("  pin    promote a fact into your permanent context files.");
+    println!("  save   write a session log before you finish.");
+    println!();
+    println!("Type them as /load in Claude Code, $load in Codex.");
     println!();
     println!("Optional: `memcrate profile` answers a few questions about you so");
-    println!("your first /load has something to read.");
+    println!("your first load has something to read.");
     println!();
     Ok(())
 }

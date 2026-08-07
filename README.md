@@ -63,9 +63,11 @@ Installed 3 skills for Claude Code to ~/.claude/skills
 Installed 3 skills for Codex to ~/.codex/skills
 
 You now have three verbs in Claude Code and Codex:
-  /load   read your vault and get oriented. Run this first.
-  /pin    promote a fact into your permanent context files.
-  /save   write a session log before you finish.
+  load   read your vault and get oriented. Run this first.
+  pin    promote a fact into your permanent context files.
+  save   write a session log before you finish.
+
+Type them as /load in Claude Code, $load in Codex.
 ```
 
 Re-running is safe. It reuses an existing vault and refreshes the skills.
@@ -122,7 +124,8 @@ memcrate --full             # also create Projects/, Daily/, Tasks/, Inbox/
 
 ### Use the verbs
 
-Start Claude Code or Codex, then:
+Start Claude Code or Codex, then type the verb. Claude Code uses a leading
+slash (`/load`); Codex uses a leading dollar sign (`$load`). The three verbs:
 
 - **`/load`** reads your vault and reconstructs context. Run it first in any new session.
 - **`/pin <insight>`** promotes a fact into `Profile.md`, `Projects.md`, or `Current State.md` so it survives across sessions.

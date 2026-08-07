@@ -1,6 +1,6 @@
 ---
 name: pin
-description: "Promote a specific insight, decision, or fact from the current conversation into one of the user's permanent context files (Profile, Projects, or Current State). Invoke whenever the user runs /pin or tells you to pin, remember permanently, or add something to their profile. Figures out which file the insight belongs in, updates it, and bumps the last_updated timestamp."
+description: "Promote a specific insight, decision, or fact from the current conversation into one of the user's permanent context files (Profile, Projects, or Current State). Invoke whenever the user runs /pin or $pin, or tells you to pin, remember permanently, or add something to their profile. Figures out which file the insight belongs in, updates it, and bumps the last_updated timestamp."
 ---
 
 # pin - Promote Insight to Permanent Memory
