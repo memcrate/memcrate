@@ -3,17 +3,17 @@ name: pin
 description: "Promote a specific insight, decision, or fact from the current conversation into one of the user's permanent context files (Profile, Projects, or Current State). Invoke whenever the user runs /pin or tells you to pin, remember permanently, or add something to their profile. Figures out which file the insight belongs in, updates it, and bumps the last_updated timestamp."
 ---
 
-# pin — Promote Insight to Permanent Memory
+# pin - Promote Insight to Permanent Memory
 
 Your job: take a specific insight, decision, or fact and write it into the right permanent context file in the user's Memcrate vault. This is the bridge from *session memory* (the Sessions folder) to *permanent memory* (`Profile.md` / `Projects.md` / `Current State.md`).
 
 ## Narrate before acting
 
-**Before any tool call, output a one-line status message to the user** so they understand what's about to happen — especially the first time `/pin` runs in a fresh install, when each new tool triggers a permission prompt.
+**Before any tool call, output a one-line status message to the user** so they understand what's about to happen - especially the first time `/pin` runs in a fresh install, when each new tool triggers a permission prompt.
 
 Open with something like:
 
-> Pinning this — figuring out which context file it belongs in (Profile / Projects / Current State), then updating it.
+> Pinning this - figuring out which context file it belongs in (Profile / Projects / Current State), then updating it.
 
 After deciding the destination, restate which file you're about to edit before the Edit call.
 
@@ -23,8 +23,8 @@ After deciding the destination, restate which file you're about to edit before t
 
 Try in order:
 
-1. **Read `~/reference_vault/Core/Context/Profile.md`** — the default install location. If Read returns content, `<vault>` = `~/reference_vault`.
-2. **Read `<cwd>/Core/Context/Profile.md`** — handles users who `cd`'d into their vault before launching the tool. Use the absolute working-directory path from your session context.
+1. **Read `~/memcrate-vault/Core/Context/Profile.md`** - the default install location. If it returns content, `<vault>` = `~/memcrate-vault`.
+2. **Read `<cwd>/Core/Context/Profile.md`** - handles users who `cd`'d into their vault before launching the tool. Use the absolute working-directory path from your session context.
 3. **Depth-1 scan of the home directory** for `*/Core/Context/Profile.md`, which finds vaults at custom paths like `~/myvault`. Resolve `<home>` from your session context (typically `/home/<user>` on Linux, `/Users/<user>` on macOS, `C:\Users\<user>` on Windows).
     - **Claude Code:** Glob with `path: <home>` and `pattern: "*/Core/Context/Profile.md"`.
     - **Codex:** run `ls -d <home>/*/Core/Context/Profile.md 2>/dev/null`.
@@ -33,7 +33,7 @@ Try in order:
 
 If all three fail, ask the user in plain English:
 
-> I couldn't find a Memcrate vault at `~/reference_vault`, in this directory, or anywhere one level deep in your home directory. Where is your vault? (Paste the absolute path. If you haven't set one up yet, run `memcrate` and try again.)
+> I couldn't find a Memcrate vault at `~/memcrate-vault`, in this directory, or anywhere one level deep in your home directory. Where is your vault? (Paste the absolute path. If you haven't set one up yet, run `memcrate` and try again.)
 
 Then `Read <answer>/Core/Context/Profile.md` to confirm before proceeding.
 
@@ -43,11 +43,11 @@ The canonical context files always live at:
 - `<vault>/Core/Context/Projects.md`
 - `<vault>/Core/Context/Current State.md`
 
-If they're not there, the vault is malformed — surface that to the user rather than writing to an alternate location.
+If they're not there, the vault is malformed - surface that to the user rather than writing to an alternate location.
 
 ## When to Use This
 
-Session logs are ephemeral — they capture what happened in one conversation. Permanent context files hold things that should be true across *every* session. Examples of things worth pinning:
+Session logs are ephemeral: they capture what happened in one conversation. Permanent context files hold things that should be true across *every* session. Examples of things worth pinning:
 
 - "My core audience is junior developers" → `Core/Context/Profile.md`
 - "Year-1 MRR target for my SaaS is $50K" → `Core/Context/Projects.md`
@@ -75,9 +75,9 @@ What specifically should I pin? Paste or describe the insight, decision, or fact
 
 Use this decision tree:
 
-- **`Core/Context/Profile.md`** — stable facts about the user, how they work, tools, preferences, goals, constraints, background. Changes quarterly.
-- **`Core/Context/Projects.md`** — anything about a specific project (status, stack, equity, milestones, success markers, blockers). Changes monthly or on project events.
-- **`Core/Context/Current State.md`** — this-week stuff (focus, deadlines, decisions log, open questions). Changes weekly.
+- **`Core/Context/Profile.md`** - stable facts about the user, how they work, tools, preferences, goals, constraints, background. Changes quarterly.
+- **`Core/Context/Projects.md`** - anything about a specific project (status, stack, equity, milestones, success markers, blockers). Changes monthly or on project events.
+- **`Core/Context/Current State.md`** - this-week stuff (focus, deadlines, decisions log, open questions). Changes weekly.
 
 If you're not sure, tell the user your guess and ask for confirmation:
 

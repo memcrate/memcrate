@@ -1,13 +1,13 @@
 # Your Memcrate Vault
 
-> Edit this file to describe your vault. The text below is the Memcrate-shipped default — keep what's useful, change what isn't.
+> Edit this file to describe your vault. The text below is the Memcrate-shipped default - keep what's useful, change what isn't.
 
 ## What's in here
 
 ```
 .
 ├── README.md              # This file
-├── .memcrate              # Marker file — lets tools find this vault from any subdirectory
+├── .memcrate              # Marker file - lets tools find this vault from any subdirectory
 └── Core/
     ├── Context/
     │   ├── Profile.md         # Stable facts about you: tools, preferences, anti-goals
@@ -17,7 +17,7 @@
         └── _README.md         # Session log schema (filled in by /save)
 ```
 
-The four files inside `Core/` are the verbs' world — `/save`, `/pin`, and `/load` only read and write here. Everything outside `Core/` is yours.
+The four files inside `Core/` are the verbs' world - `/save`, `/pin`, and `/load` only read and write here. Everything outside `Core/` is yours.
 
 ## Growing into the personal-OS scope
 
@@ -32,7 +32,7 @@ When you want more than just verbs, add optional folders alongside `Core/`:
 └── Inbox/                 # Unprocessed capture
 ```
 
-These are conventions, not requirements. `mkdir Projects` and you're done — the verbs won't notice, because they only look inside `Core/`.
+These are conventions, not requirements. `mkdir Projects` and you're done - the verbs won't notice, because they only look inside `Core/`.
 
 ## Conventions
 
@@ -45,11 +45,11 @@ These are conventions, not requirements. `mkdir Projects` and you're done — th
 
 Talk to your AI tool. Three verbs do the writing:
 
-- `/load` — read your vault and reconstruct context at the start of a session.
-- `/save` — write a session log to `Core/Sessions/` at the end.
-- `/pin <insight>` — promote a fact into `Profile.md`, `Projects.md`, or `Current State.md` when it should stick across sessions.
+- `/load` - read your vault and reconstruct context at the start of a session.
+- `/save` - write a session log to `Core/Sessions/` at the end.
+- `/pin <insight>` - promote a fact into `Profile.md`, `Projects.md`, or `Current State.md` when it should stick across sessions.
 
-Hand-editing any file is fine too — the verbs are conveniences, not gates. The vault is yours.
+Hand-editing any file is fine too - the verbs are conveniences, not gates. The vault is yours.
 
 ## Read more
 

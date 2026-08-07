@@ -91,7 +91,7 @@ impl Tool {
     }
 }
 
-const DEFAULT_VAULT_DIR: &str = "reference_vault";
+const DEFAULT_VAULT_DIR: &str = "memcrate-vault";
 
 /// The whole product in one command: pick a vault location, create it, seed
 /// Profile and Projects, and install the skills for every supported tool.
@@ -606,7 +606,7 @@ fn update_projects(text: &str, projects: &[String], today: &str) -> String {
 
 fn project_to_section(line: &str) -> String {
     let line = line.trim();
-    let (name, desc) = if let Some((n, d)) = line.split_once(" — ") {
+    let (name, desc) = if let Some((n, d)) = line.split_once(" - ") {
         (n.trim(), Some(d.trim()))
     } else if let Some((n, d)) = line.split_once(" - ") {
         (n.trim(), Some(d.trim()))

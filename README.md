@@ -6,14 +6,14 @@
 
 ## What this is
 
-Every AI coding tool eventually loses context. Sessions end. Tools change. You start fresh in Cursor on Monday, then jump to Claude Code on Tuesday, then a Claude Desktop window for planning on Wednesday — and each one needs to be told from scratch what you're working on, what's been decided, what's broken, what's next.
+Every AI coding tool eventually loses context. Sessions end. Tools change. You start fresh in Cursor on Monday, then jump to Claude Code on Tuesday, then a Claude Desktop window for planning on Wednesday - and each one needs to be told from scratch what you're working on, what's been decided, what's broken, what's next.
 
 Memcrate is a local markdown vault plus three verbs (`/save`, `/pin`, `/load`) that any AI tool can read and write to. Your context lives in plain `.md` files you own. The verbs make the rituals consistent across tools.
 
 ## What your vault looks like
 
 ```
-~/reference_vault/
+~/memcrate-vault/
 ├── README.md
 ├── .memcrate                  # marker file (lets tools find this vault)
 └── Core/
@@ -24,7 +24,7 @@ Memcrate is a local markdown vault plus three verbs (`/save`, `/pin`, `/load`) t
     └── Sessions/              # /save writes session logs here
 ```
 
-Four files inside `Core/`. That's the whole verbs surface — `/save`, `/pin`, and `/load` only read and write within `Core/`. Add optional folders alongside `Core/` (`Projects/`, `Daily/`, `Tasks/`, `Inbox/`) whenever you want the personal-OS scope.
+Four files inside `Core/`. That's the whole verbs surface - `/save`, `/pin`, and `/load` only read and write within `Core/`. Add optional folders alongside `Core/` (`Projects/`, `Daily/`, `Tasks/`, `Inbox/`) whenever you want the personal-OS scope.
 
 Read [docs/overview.md](docs/overview.md) for the full pitch, [docs/verbs.md](docs/verbs.md) for the verb contracts, and [docs/vault-structure.md](docs/vault-structure.md) for the structural details.
 
@@ -32,7 +32,7 @@ Read [docs/overview.md](docs/overview.md) for the full pitch, [docs/verbs.md](do
 
 - **Static `CLAUDE.md` / `AGENTS.md` / `.cursorrules`** capture project facts but not session state.
 - **Cloud-backed AI memory** (mem0, Letta, supermemory) is vendor-locked and not repo-scoped.
-- **Session-memory packs** (CPR — the verb-trio inspiration here) work great for one tool but don't span tools or carry full personal context.
+- **Session-memory packs** (CPR - the verb-trio inspiration here) work great for one tool but don't span tools or carry full personal context.
 - **MCP memory servers** are binary; humans can't read them.
 
 Memcrate is a personal context OS, not a memory tool. Your project catalog, daily state, decisions, and infrastructure all draw from the same vault.
@@ -41,7 +41,7 @@ Memcrate is a personal context OS, not a memory tool. Your project catalog, dail
 
 ```
 memcrate/
-├── reference-vault/    # Starter vault scaffold (Core/ + .memcrate marker) — copy anywhere
+├── reference-vault/    # Starter vault scaffold (Core/ + .memcrate marker) - copy anywhere
 ├── skills/             # Canonical SKILL.md files for each AI tool
 │   └── agent/          # /save, /load, /pin as SKILL.md (Claude Code + Codex)
 └── docs/               # Format spec: overview, verbs, vault structure, skills, CLI
@@ -54,10 +54,10 @@ Install the CLI, then run `memcrate`. One question, then it does the rest.
 ```
 $ memcrate
 
-Where should your vault live? [~/reference_vault]:
+Where should your vault live? [~/memcrate-vault]:
 >
 
-Created your vault at ~/reference_vault.
+Created your vault at ~/memcrate-vault.
 
 Installed 3 skills for Claude Code to ~/.claude/skills
 Installed 3 skills for Codex to ~/.codex/skills
@@ -128,7 +128,7 @@ Start Claude Code or Codex, then:
 - **`/pin <insight>`** promotes a fact into `Profile.md`, `Projects.md`, or `Current State.md` so it survives across sessions.
 - **`/save`** writes a session log to `Core/Sessions/` so the next `/load` picks up where you left off.
 
-The skills find your vault by reading `~/reference_vault/Core/Context/Profile.md`, then the current directory, then a depth-1 scan of your home directory. If nothing matches, `/load` asks you where it is.
+The skills find your vault by reading `~/memcrate-vault/Core/Context/Profile.md`, then the current directory, then a depth-1 scan of your home directory. If nothing matches, `/load` asks you where it is.
 
 ### Skills you already own
 
@@ -161,9 +161,9 @@ The leak check exists because this repo's reference vault and skills are general
 
 ## License
 
-- Code (`skills/`, future CLI source, install scripts) — [MIT](LICENSE)
-- Format spec (`docs/`) — [CC0](LICENSE-spec). Build a Memcrate-compatible tool without legal friction.
+- Code (`skills/`, future CLI source, install scripts) - [MIT](LICENSE)
+- Format spec (`docs/`) - [CC0](LICENSE-spec). Build a Memcrate-compatible tool without legal friction.
 
 ## Credit
 
-The verb trio (`/save`, `/pin`, `/load`) generalizes [EliaAlberti/cpr-compress-preserve-resume](https://github.com/EliaAlberti/cpr-compress-preserve-resume) — a Claude-Code-only session-memory skill pack. Memcrate scales that pattern to multi-tool personal-context-OS, adds `/pin` for the bridge from session memory to permanent memory, and decouples the format from any one tool. Honest lineage.
+The verb trio (`/save`, `/pin`, `/load`) generalizes [EliaAlberti/cpr-compress-preserve-resume](https://github.com/EliaAlberti/cpr-compress-preserve-resume) - a Claude-Code-only session-memory skill pack. Memcrate scales that pattern to multi-tool personal-context-OS, adds `/pin` for the bridge from session memory to permanent memory, and decouples the format from any one tool. Honest lineage.

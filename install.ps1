@@ -103,7 +103,7 @@ try {
     # Also update the current session so `memcrate` works without opening a new terminal.
     if (-not ($env:Path.Split(';') -contains $installDir)) {
         $env:Path = "$installDir;$env:Path"
-        Write-Info "Updated PATH for this session — you can run `memcrate` right now."
+        Write-Info "Updated PATH for this session - you can run `memcrate` right now."
     }
 
     Write-Info ""

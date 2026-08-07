@@ -1,6 +1,6 @@
 ---
 title: Sessions Folder README
-purpose: Session log format spec — any AI tool can read and write these files consistently
+purpose: Session log format spec - any AI tool can read and write these files consistently
 ---
 
 # Sessions/
@@ -33,7 +33,7 @@ tool: claude-code | cowork | cursor | aider | other
 outcome: one-line summary of what the session accomplished
 ---
 
-# Session: YYYY-MM-DD — short slug
+# Session: YYYY-MM-DD - short slug
 
 ## Quick Reference
 **Topics**: comma-separated key topics
@@ -47,7 +47,7 @@ outcome: one-line summary of what the session accomplished
 - Thing now understood that wasn't before
 
 ## Files Touched
-- path/to/file.md — what changed
+- path/to/file.md - what changed
 
 ## Pending / Next Actions
 - [ ] Thing to do next session
@@ -70,5 +70,5 @@ Full conversation or detailed notes, for later searchability.
 ## Notes
 
 - Aim to keep files under ~500 lines. If a session log is longer, the curation step probably dumped too much.
-- Don't manually edit `type: session` — verbs use it to distinguish session logs from other notes.
+- Don't manually edit `type: session` - verbs use it to distinguish session logs from other notes.
 - Consider archiving anything older than 6 months into `Sessions/Archive/YYYY-MM/`.

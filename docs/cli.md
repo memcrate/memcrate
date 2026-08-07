@@ -19,7 +19,7 @@ memcrate --full               # also create Projects/, Daily/, Tasks/, Inbox/
 
 Running it:
 
-1. Asks where the vault should live, defaulting to `~/reference_vault`. An existing Memcrate vault at that path is reused; a path with other content in it makes it ask again.
+1. Asks where the vault should live, defaulting to `~/memcrate-vault`. An existing Memcrate vault at that path is reused; a path with other content in it makes it ask again.
 2. Creates the vault: `Core/Context/{Profile,Projects,Current State}.md`, `Core/Sessions/`, and a `.memcrate` marker so tools can find it from any subdirectory.
 3. Installs the `/load`, `/save`, and `/pin` skills into `~/.claude/skills/` and `~/.codex/skills/`. Claude Code and Codex read the same `SKILL.md` format, so one canonical set of skills serves both.
 
@@ -78,7 +78,7 @@ Refreshes installed skills from the canonical source (the public Memcrate repo) 
 Quick vault health check. Sketch:
 
 ```
-Vault: ~/reference_vault (full shape)
+Vault: ~/memcrate-vault (full shape)
 Last /save: 2026-05-10 14:30 (auth-rewrite-part-1)
 Skills installed: claude-code
 Profile.md: 247 lines, last_updated 2026-04-22

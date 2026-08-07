@@ -4,7 +4,7 @@ title: Vault Structure
 
 # Vault Structure
 
-The vault is a directory of markdown files with conventions. There is one canonical shape — `Core/` holds everything the verbs care about, and a small set of optional human-only folders sit alongside `Core/` for the personal-OS scope.
+The vault is a directory of markdown files with conventions. There is one canonical shape - `Core/` holds everything the verbs care about, and a small set of optional human-only folders sit alongside `Core/` for the personal-OS scope.
 
 ## The shape
 
@@ -32,7 +32,7 @@ The vault is a directory of markdown files with conventions. There is one canoni
 └── Inbox/                     # (optional) unprocessed capture
 ```
 
-**Everything inside `Core/` is the verbs' world.** Profile, Projects, Current State, and Sessions — these are what `/save`, `/pin`, and `/load` read and write. The structure is fixed; the verbs depend on it.
+**Everything inside `Core/` is the verbs' world.** Profile, Projects, Current State, and Sessions - these are what `/save`, `/pin`, and `/load` read and write. The structure is fixed; the verbs depend on it.
 
 **Everything outside `Core/` is for humans.** The optional folders (`Projects/`, `Daily/`, `Tasks/`, `Inbox/`) are conventions Memcrate ships because they're useful, not requirements the verbs check for. You can add, rename, or skip them freely.
 
@@ -40,7 +40,7 @@ The vault is a directory of markdown files with conventions. There is one canoni
 
 Three reasons:
 
-1. **The verbs need a stable, known location.** Skills, the CLI, and the MCP server all look in `Core/Context/` and `Core/Sessions/`. No fallback logic, no resolution table — one place.
+1. **The verbs need a stable, known location.** Skills, the CLI, and the MCP server all look in `Core/Context/` and `Core/Sessions/`. No fallback logic, no resolution table - one place.
 2. **It separates "stuff the verbs care about" from "stuff humans care about."** Without that separator, the canonical `Projects.md` file would collide with the optional `Projects/` bucket folder at the root level. With `Core/`, no ambiguity.
 3. **It future-proofs.** Adding a new optional folder (say, `Inbox/`) never affects the verbs because they never look outside `Core/`. The personal-OS scope can grow without touching the verb contract.
 
@@ -50,14 +50,14 @@ The "minimum" install is just `Core/` + a `README.md`. No optional folders. The 
 
 The "full" install is `Core/` + every optional folder pre-scaffolded as empty buckets. Useful when you know you want the personal-OS scope from day one. The CLI calls this `memcrate init --full`.
 
-Both are the same vault. The optional folders are just there or not. You can add them later by running `mkdir Projects` (or `Daily`, etc.) — the verbs won't notice, and they don't need to.
+Both are the same vault. The optional folders are just there or not. You can add them later by running `mkdir Projects` (or `Daily`, etc.) - the verbs won't notice, and they don't need to.
 
 ## Vault layout discovery
 
 Skills locate the vault by attempting to read `Core/Context/Profile.md` from two candidates, in order:
 
-1. **`~/reference_vault/`** — Memcrate's default install path (`memcrate init ~/reference_vault`).
-2. **The current working directory** — handles users who `cd`'d into a non-default vault before launching their tool.
+1. **`~/memcrate-vault/`** - Memcrate's default install path (`memcrate init ~/memcrate-vault`).
+2. **The current working directory** - handles users who `cd`'d into a non-default vault before launching their tool.
 
 If both reads miss, the skill asks the user in plain English where their vault is, then reads from the answer. Per-tool implementations should use a file-read primitive (not shell expansion) for these checks so permission prompts stay legible.
 
@@ -126,10 +126,10 @@ The four rows under `Core/` are the verbs' world. Everything below is for humans
 
 Memcrate is local-first and storage-agnostic. The vault is just a folder; sync is your call:
 
-- **Obsidian Sync** — paid, end-to-end encrypted, works across desktop + mobile. Recommended for users already on Obsidian.
-- **iCloud Drive / Google Drive / Dropbox** — works fine; watch for editor lock-file conflicts.
-- **Git** — strong choice if you're comfortable with the workflow; gives diff history for free.
-- **Syncthing / `rsync`** — for self-hosted setups.
+- **Obsidian Sync** - paid, end-to-end encrypted, works across desktop + mobile. Recommended for users already on Obsidian.
+- **iCloud Drive / Google Drive / Dropbox** - works fine; watch for editor lock-file conflicts.
+- **Git** - strong choice if you're comfortable with the workflow; gives diff history for free.
+- **Syncthing / `rsync`** - for self-hosted setups.
 
 Memcrate doesn't bundle a sync solution. The CLI's `memcrate init` may prompt for a recommendation but you always pick.
 
