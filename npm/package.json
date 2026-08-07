@@ -1,6 +1,6 @@
 {
   "name": "memcrate",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Markdown-native personal context vault for AI tools. Three verbs (/save, /pin, /load) over a portable local vault format.",
   "keywords": [
     "memcrate",
