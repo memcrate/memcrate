@@ -12,7 +12,7 @@ The skills are *ergonomic surfaces*, not the system itself. The system is the ma
 
 - **Location:** `~/.claude/skills/<verb>/SKILL.md`
 - **Format:** YAML frontmatter (`name`, `description`) + markdown instructions
-- **Install:** `memcrate install claude-code` writes the three skill folders, each embedded in the CLI binary at compile time (so it works offline).
+- **Install:** Running `memcrate` writes the three skill folders, each embedded in the CLI binary at compile time (so it works offline).
 - **Invocation:** Type `/save`, `/pin`, `/load` in Claude Code.
 - **Behavior:** Claude Code auto-discovers skills in `~/.claude/skills/` on session start.
 
@@ -20,7 +20,7 @@ The skills are *ergonomic surfaces*, not the system itself. The system is the ma
 
 - **Location:** `~/.codex/skills/<verb>/SKILL.md`
 - **Format:** identical to Claude Code. Codex reads the same `SKILL.md` shape, so Memcrate ships one canonical set of skills from `skills/agent/` and installs it to whichever tools you pick.
-- **Install:** `memcrate install codex`, or `memcrate install all` for both tools at once.
+- **Install:** Running `memcrate`, which installs for both tools at once.
 - **Invocation:** Type `/save`, `/pin`, `/load` in Codex.
 - **Note:** the vault-discovery step names the concrete call for each tool (Glob for Claude Code, `ls -d` for Codex), because an explicit tool call is followed more reliably than an abstract instruction.
 

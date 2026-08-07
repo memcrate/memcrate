@@ -11,12 +11,10 @@ This package is a thin wrapper. On install it downloads the `memcrate` binary fo
 ## Quick start
 
 ```bash
-memcrate init ~/reference_vault    # scaffold a vault
-memcrate setup           # seed Profile.md and Projects.md from 4 prompts
-memcrate install         # install /load, /save, /pin for Claude Code and/or Codex
+memcrate                 # asks where your vault goes, then sets everything up
 ```
 
-Then start your AI tool and run `/load`.
+It creates the vault and installs the /load, /save, and /pin skills for Claude Code and Codex. Then start your tool and run `/load`.
 
 ## What it is
 

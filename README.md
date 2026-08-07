@@ -49,15 +49,25 @@ memcrate/
 
 ## Getting started
 
-Install the CLI, then run `memcrate`. It asks one question and does the rest.
+Install the CLI, then run `memcrate`. That is the whole setup.
 
 ```
 $ memcrate
+
+Memcrate creates a markdown vault your AI tools can read, then installs
+the /load, /save, and /pin skills for Claude Code and Codex.
+Press Enter to accept a default, or Ctrl-C to stop.
 
 Where should your vault live? [~/reference_vault]:
 >
 
 Created your vault at ~/reference_vault.
+
+A few questions so your tools know who you are. Enter skips any of them.
+
+Your name (or how you'd like to be referred to):
+> Jane Dev
+...
 
 Installed 3 skills for Claude Code to ~/.claude/skills
 Installed 3 skills for Codex to ~/.codex/skills
@@ -68,13 +78,13 @@ You now have three verbs in Claude Code and Codex:
   /save   write a session log before you finish.
 ```
 
-That is the whole setup. The individual commands below exist for scripting and for when you want finer control.
+Re-running is safe. It reuses an existing vault, leaves answers you already gave alone, and refreshes the skills.
 
-### 1. Install the CLI
+### Install the CLI
 
 Pick one path:
 
-**Linux / macOS (Apple Silicon)** — curl one-liner:
+**Linux / macOS (Apple Silicon)** - curl one-liner:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/memcrate/memcrate/main/install.sh | sh
@@ -82,7 +92,7 @@ curl -fsSL https://raw.githubusercontent.com/memcrate/memcrate/main/install.sh |
 
 Drops the `memcrate` binary into `/usr/local/bin` (uses `sudo` if needed).
 
-**Windows** — PowerShell one-liner:
+**Windows** - PowerShell one-liner:
 
 ```powershell
 irm https://raw.githubusercontent.com/memcrate/memcrate/main/install.ps1 | iex
@@ -102,67 +112,29 @@ npm install -g memcrate
 cargo install memcrate
 ```
 
-Builds from source via crates.io. Requires a Rust toolchain (`rustup`).
-
-Verify:
+### Options
 
 ```bash
-memcrate --version
+memcrate --vault ~/notes    # skip the location prompt
+memcrate --yes              # take every default, ask nothing (implied without a terminal)
+memcrate --full             # also create Projects/, Daily/, Tasks/, Inbox/
 ```
 
-### 2. Scaffold your vault
+`--yes` plus `--vault` is the scripted form for dotfiles and container images.
 
-```bash
-memcrate init ~/reference_vault
-```
+### Use the verbs
 
-You can use any path — `~/reference_vault` is just the default convention. The command creates `~/reference_vault/Core/Context/{Profile,Projects,Current State}.md` and `~/reference_vault/Core/Sessions/` for session logs, plus a `.memcrate` marker file so tools can find the vault from any subdirectory.
+Start Claude Code or Codex, then:
 
-### 3. Populate your vault (optional but recommended)
+- **`/load`** reads your vault and reconstructs context. Run it first in any new session.
+- **`/pin <insight>`** promotes a fact into `Profile.md`, `Projects.md`, or `Current State.md` so it survives across sessions.
+- **`/save`** writes a session log to `Core/Sessions/` so the next `/load` picks up where you left off.
 
-```bash
-memcrate setup
-```
+The skills find your vault by reading `~/reference_vault/Core/Context/Profile.md`, then the current directory, then a depth-1 scan of your home directory. If nothing matches, `/load` asks you where it is.
 
-Asks four short questions — your name, what you do, tools you always use, active projects (one per line, blank to finish) — and writes the answers into `Profile.md` and `Projects.md`. Day-one `/load` then has real context to read instead of an empty scaffold.
+### Skills you already own
 
-`setup` finds your vault automatically. Resolution order:
-
-1. Explicit path: `memcrate setup /path/to/vault`
-2. Current working directory if it has a `.memcrate` marker
-3. Any parent directory with a `.memcrate` marker (git-style upward walk)
-4. A single vault in `$HOME` (scanned at depth 1)
-5. `~/reference_vault` as a final fallback
-
-Skip this step if you'd rather populate everything via `/pin` once you're in an AI tool. You can also hand-edit `Profile.md` and `Projects.md` directly — they include section guidance inline — but you shouldn't need to.
-
-### 4. Install skills for your AI tool
-
-```bash
-memcrate install
-```
-
-Asks which tool you want, then drops `/load`, `/save`, and `/pin` into place. Claude Code and Codex both read the same `SKILL.md` format, so the same three skills work in either.
-
-```bash
-memcrate install claude-code   # ~/.claude/skills/
-memcrate install codex         # ~/.codex/skills/
-memcrate install all           # both, no prompt
-```
-
-Pass `--target <path>` to install one tool somewhere else, or `--force` to update an existing Memcrate install. `--force` only ever replaces skills Memcrate itself installed. If you already have your own skill named `load`, `save`, or `pin`, it stops and tells you rather than overwriting your work.
-
-Other tools (Claude Desktop, Cursor, Aider) are coming in later v0.x releases; see [docs/skills.md](docs/skills.md) for the planned shape.
-
-### 5. Use the verbs
-
-Start an AI tool session in or near your vault, then:
-
-- **`/load`** — read your vault and reconstruct context. Run this first in any new session.
-- **`/pin <insight>`** — promote a fact into `Profile.md`, `Projects.md`, or `Current State.md` so it survives across sessions.
-- **`/save`** — write a session log to `Core/Sessions/` when you're done so the next `/load` can pick up where this one left off.
-
-The skills look for your vault by reading `~/reference_vault/Core/Context/Profile.md` first, then the current working directory, then a depth-1 scan of your home directory (so custom paths like `~/myvault` are found automatically). If nothing matches, `/load` asks you in plain English where your vault is on first use.
+Memcrate never replaces a skill it did not install. If you already have your own `load`, `save`, or `pin`, it sets up everything else and tells you which one it skipped.
 
 ## Advanced install options
 
@@ -181,7 +153,7 @@ Pre-built binaries on the [releases page](https://github.com/memcrate/memcrate/r
 
 ## About `reference-vault/`
 
-A starter vault scaffold (same shape as the "What your vault looks like" diagram above), shipped inside the CLI binary and extracted by `memcrate init`. Each canonical file has section guidance inline so AI tools know what belongs where when `/pin` writes to it. You can also copy `reference-vault/` directly into any directory if you'd rather skip the CLI.
+A starter vault scaffold (same shape as the "What your vault looks like" diagram above), shipped inside the CLI binary and extracted when you run `memcrate`. Each canonical file has section guidance inline so AI tools know what belongs where when `/pin` writes to it. You can also copy `reference-vault/` directly into any directory if you'd rather skip the CLI.
 
 ## Development
 

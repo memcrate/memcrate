@@ -8,55 +8,40 @@ The CLI is Memcrate's install layer - it scaffolds vaults and distributes skills
 
 > **Status:** shipped. `cargo install memcrate` or the install one-liners in the [README](../README.md) get you the current release. The commands below are split into what exists today and what's planned; planned commands are design targets, not promises of syntax.
 
-## Shipped commands
+## The command
 
 ```bash
-memcrate init [path]               # Scaffold a vault at path (default: ~/reference_vault)
-memcrate setup [path]              # Populate Profile.md and Projects.md from 4 prompts
-memcrate install [tool]            # Install /save, /pin, /load skills (asks if tool omitted)
+memcrate                      # guided setup: asks where the vault goes, then does everything
+memcrate --vault ~/notes      # skip the location prompt
+memcrate --yes                # take every default, ask nothing
+memcrate --full               # also create Projects/, Daily/, Tasks/, Inbox/
 ```
 
-### `memcrate init [path]`
+There is one command. Running it:
 
-Scaffolds a new vault.
+1. Asks where the vault should live, defaulting to `~/reference_vault`. If the path exists and is already a Memcrate vault it is reused; if it exists with other content in it, you are asked for a different path.
+2. Creates the vault: `Core/Context/{Profile,Projects,Current State}.md`, `Core/Sessions/`, and a `.memcrate` marker so tools can find it from any subdirectory.
+3. Asks four short questions (name, what you do, tools, active projects) and writes the answers into `Profile.md` and `Projects.md`. Enter skips any of them, and the step is skipped entirely if those files already have content, so re-running never clobbers real answers.
+4. Installs the `/load`, `/save`, and `/pin` skills into `~/.claude/skills/` and `~/.codex/skills/`. Claude Code and Codex read the same `SKILL.md` format, so one canonical set of skills serves both.
 
-- Default path: `~/reference_vault`
-- Default shape: `Core/` + `README.md` + `.memcrate` marker, nothing else (per [vault-structure.md](vault-structure.md)).
-- `--full` flag also scaffolds the optional folders (`Projects/`, `Daily/`, `Tasks/`, `Inbox/`) as empty buckets, useful when you know you want the personal-OS scope from day one.
-- `--force` flag overwrites an existing vault (or scaffolds into a non-empty directory).
-- The `.memcrate` marker file lets the upward-walk vault-resolution rule locate the vault from any subdirectory.
-- No prompts: `init` only scaffolds. Seeding content is `setup`'s job.
+Re-running is safe and idempotent.
 
-After `init`, the vault is scaffolded but empty of personal content (no project entries, no sessions). Run `memcrate setup` to seed it, or run `/load` once to confirm the wiring works and write your first `/pin` entries.
+`--yes` is implied when there is no terminal, so `memcrate` works unattended in a script, a Dockerfile, or CI without hanging on a prompt. Combined with `--vault`, that is the scripted form:
 
-### `memcrate setup [path]`
+```bash
+memcrate --vault ~/notes --yes
+```
 
-Interactive wizard that populates `Profile.md` and `Projects.md` from four short questions: your name, what you do, tools you always use, and active projects (one per line). Press Enter to skip any question.
+### Skill ownership
 
-- Finds the vault automatically when `path` is omitted. Resolution order: current directory with a `.memcrate` marker, then an upward walk to any parent with a marker, then a single marked vault at depth 1 in your home directory, then `~/reference_vault`.
-- Refuses to overwrite hand-edited files; `--force` overrides.
-- Only touches `Profile.md` and `Projects.md`. `Current State.md` and `Sessions/` are yours.
-
-### `memcrate install [tool]`
-
-Installs the bundled `/load`, `/save`, and `/pin` SKILL.md files. Run it with no argument and it asks which tool you want.
-
-- `claude-code` installs to `~/.claude/skills/`.
-- `codex` installs to `~/.codex/skills/`.
-- `all` installs to both without prompting.
-- `--target <path>` installs somewhere else. Only valid with a single tool.
-- `--force` updates an existing Memcrate install. It replaces only skills carrying the `.memcrate-skill` marker, so a same-named skill you wrote yourself is never deleted; the command stops and names it instead. Local edits to Memcrate's own skills are still lost on `--force`, so keep custom behavior in your own copy.
-- The skills are embedded in the binary at compile time, so `install` works offline.
-- With no argument and no terminal to prompt on (a script or CI), it exits with an error listing the explicit forms rather than hanging.
-
-Claude Code and Codex read the same `SKILL.md` format, so both install from one canonical source in `skills/agent/`.
+Installed skills carry a `.memcrate-skill` marker. Memcrate only ever replaces skills carrying that marker, so a skill you wrote yourself named `load`, `save`, or `pin` is never deleted. When one is in the way, the run finishes everything else and reports the one it skipped, so a stray skill in one tool does not cost you the other.
 
 ## Planned commands
 
 These are design targets for future releases. Names and shapes may change.
 
 ```bash
-memcrate install <tool>            # More tools: claude-desktop, cursor, aider
+memcrate --tool <name>             # More tools: claude-desktop, cursor, aider
 memcrate install --all             # Install for all detected tools
 memcrate update                    # Refresh skills from canonical source
 memcrate status                    # Show vault health: structure, skills installed, last save

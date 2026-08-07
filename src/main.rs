@@ -1,5 +1,5 @@
 use anyhow::{bail, Context, Result};
-use clap::{Parser, Subcommand, ValueEnum};
+use clap::{Parser, ValueEnum};
 use include_dir::{include_dir, Dir};
 use std::fs;
 use std::io::{self, BufRead, IsTerminal, Write};
@@ -21,57 +21,21 @@ const SKILL_MARKER: &str = ".memcrate-skill";
 #[command(
     name = "memcrate",
     version,
-    about = "Markdown-native personal context vault for AI tools.",
-    long_about = "Memcrate scaffolds and maintains a portable, local-first markdown vault that any AI tool can read. Three verbs — /save, /pin, /load — operate on a defined directory shape. The CLI is the install layer; the vault is the system."
+    about = "Set up a markdown context vault your AI tools can read.",
+    long_about = "Memcrate creates a portable, local-first markdown vault and installs the /load, /save, and /pin skills for Claude Code and Codex. Run it with no arguments for the guided setup."
 )]
 struct Cli {
-    #[command(subcommand)]
-    command: Option<Commands>,
-}
+    /// Where the vault should live. Skips the location prompt.
+    #[arg(long, value_name = "PATH")]
+    vault: Option<PathBuf>,
 
-#[derive(Subcommand)]
-enum Commands {
-    /// Scaffold a new vault at the given path (default: ~/reference_vault).
-    Init {
-        /// Path where the vault should be created. Defaults to ~/reference_vault.
-        path: Option<PathBuf>,
+    /// Take every default and ask nothing. Implied when there is no terminal.
+    #[arg(long)]
+    yes: bool,
 
-        /// Also scaffold optional human-only folders (Projects/, Daily/, Tasks/, Inbox/).
-        #[arg(long)]
-        full: bool,
-
-        /// Overwrite an existing vault at this path.
-        #[arg(long)]
-        force: bool,
-    },
-
-    /// Install Memcrate skills for an AI tool.
-    Install {
-        /// Which tool to install for. Omit to be asked.
-        #[arg(value_enum)]
-        tool: Option<Tool>,
-
-        /// Override the default install path. Only valid with a single tool.
-        #[arg(long)]
-        target: Option<PathBuf>,
-
-        /// Overwrite skills Memcrate previously installed. Never touches skills
-        /// it does not own.
-        #[arg(long)]
-        force: bool,
-    },
-
-    /// Populate Profile.md and Projects.md with a quick interactive wizard.
-    Setup {
-        /// Path to the vault. If omitted, looks for a vault in the current
-        /// directory, then walks up looking for a `.memcrate` marker, then
-        /// scans your home directory for a single vault.
-        path: Option<PathBuf>,
-
-        /// Overwrite Profile.md and Projects.md even if they've been hand-edited.
-        #[arg(long)]
-        force: bool,
-    },
+    /// Also create the optional folders (Projects/, Daily/, Tasks/, Inbox/).
+    #[arg(long)]
+    full: bool,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, ValueEnum)]
@@ -113,27 +77,27 @@ impl Tool {
 
 const DEFAULT_VAULT_DIR: &str = "reference_vault";
 
-/// `memcrate` with no arguments: ask where the vault goes, create it, and
-/// install the skills for every supported tool. One command, one question.
-fn guided_setup() -> Result<()> {
-    if !io::stdin().is_terminal() {
-        bail!(
-            "memcrate with no arguments runs an interactive setup, but there is no \
-             terminal to prompt on.\nUse the explicit commands instead:\n  \
-             memcrate init <path>\n  memcrate install all"
-        );
+/// The whole product in one command: pick a vault location, create it, seed
+/// Profile and Projects, and install the skills for every supported tool.
+fn run(cli: Cli) -> Result<()> {
+    let ask = !cli.yes && io::stdin().is_terminal();
+
+    if ask {
+        println!("Memcrate creates a markdown vault your AI tools can read, then installs");
+        println!("the /load, /save, and /pin skills for Claude Code and Codex.");
+        println!("Press Enter to accept a default, or Ctrl-C to stop.");
+        println!();
     }
 
     let default = home_dir()?.join(DEFAULT_VAULT_DIR);
+    let vault = match cli.vault {
+        Some(p) => expand_home(&p.to_string_lossy())?,
+        None if ask => ask_vault_path(&default)?,
+        None => default,
+    };
 
-    println!("Memcrate sets up a markdown vault your AI tools can read, then installs");
-    println!("the /load, /save, and /pin skills for Claude Code and Codex.");
-    println!();
-
-    let vault = ask_vault_path(&default)?;
-    let existed = vault.join(".memcrate").exists();
-
-    if existed {
+    let reused = vault.join(".memcrate").exists();
+    if reused {
         println!("Using the existing vault at {}.", vault.display());
     } else {
         ensure_writable(&vault, false)?;
@@ -145,9 +109,24 @@ fn guided_setup() -> Result<()> {
         println!("Created your vault at {}.", vault.display());
     }
 
+    if cli.full {
+        for folder in OPTIONAL_FOLDERS {
+            let dir = vault.join(folder);
+            fs::create_dir_all(&dir)
+                .with_context(|| format!("Failed to create {}", dir.display()))?;
+            fs::write(dir.join(".gitkeep"), "")
+                .with_context(|| format!("Failed to write .gitkeep in {}", dir.display()))?;
+        }
+        println!("Added the optional folders: Projects, Daily, Tasks, Inbox.");
+    }
+
+    if ask {
+        seed_profile(&vault)?;
+    }
+
     println!();
 
-    // A failure for one tool should not cost the user the whole run.
+    // One tool failing should not cost the user the other one.
     let mut installed = 0;
     let mut problems: Vec<String> = Vec::new();
     for tool in Tool::All.expand() {
@@ -173,9 +152,52 @@ fn guided_setup() -> Result<()> {
     println!("  /pin    promote a fact into your permanent context files.");
     println!("  /save   write a session log before you finish.");
     println!();
-    println!("Optional: `memcrate setup` asks four questions and fills in your");
-    println!("Profile and Projects so day-one /load has real context to read.");
+    Ok(())
+}
+
+/// Fills Profile.md and Projects.md from four questions. Skipped silently when
+/// the files already have content, so re-running never clobbers real answers.
+fn seed_profile(vault: &Path) -> Result<()> {
+    let profile_path = vault.join("Core").join("Context").join("Profile.md");
+    let projects_path = vault.join("Core").join("Context").join("Projects.md");
+
+    let profile_text = match fs::read_to_string(&profile_path) {
+        Ok(t) => t,
+        Err(_) => return Ok(()),
+    };
+    let projects_text = fs::read_to_string(&projects_path).unwrap_or_default();
+
+    if !profile_text.contains(IDENTITY_PLACEHOLDER) && !projects_text.contains("## Example Project")
+    {
+        return Ok(());
+    }
+
     println!();
+    println!("A few questions so your tools know who you are. Enter skips any of them.");
+    println!();
+
+    let name = prompt_line("Your name (or how you'd like to be referred to)")?;
+    let what_you_do = prompt_line("What do you do? (one short paragraph)")?;
+    let tools = prompt_line("Tools you always use (comma-separated)")?;
+    let projects = prompt_multiline("Active projects (one per line, blank line to finish)")?;
+
+    if name.is_empty() && what_you_do.is_empty() && tools.is_empty() && projects.is_empty() {
+        return Ok(());
+    }
+
+    let today = today_iso();
+    fs::write(
+        &profile_path,
+        update_profile(&profile_text, &name, &what_you_do, &tools, &today),
+    )
+    .with_context(|| format!("Failed to write {}", profile_path.display()))?;
+    fs::write(
+        &projects_path,
+        update_projects(&projects_text, &projects, &today),
+    )
+    .with_context(|| format!("Failed to write {}", projects_path.display()))?;
+
+    println!("Saved to Profile.md and Projects.md.");
     Ok(())
 }
 
@@ -235,43 +257,7 @@ fn expand_home(input: &str) -> Result<PathBuf> {
 
 fn main() -> Result<()> {
     let cli = Cli::parse();
-    let Some(command) = cli.command else {
-        return guided_setup();
-    };
-    match command {
-        Commands::Init { path, full, force } => init(path, full, force),
-        Commands::Install {
-            tool,
-            target,
-            force,
-        } => install(tool, target, force),
-        Commands::Setup { path, force } => setup(path, force),
-    }
-}
-
-fn init(path: Option<PathBuf>, full: bool, force: bool) -> Result<()> {
-    let target = resolve_target(path)?;
-    ensure_writable(&target, force)?;
-
-    fs::create_dir_all(&target)
-        .with_context(|| format!("Failed to create {}", target.display()))?;
-
-    REFERENCE_VAULT
-        .extract(&target)
-        .with_context(|| format!("Failed to extract reference vault to {}", target.display()))?;
-
-    if full {
-        for folder in OPTIONAL_FOLDERS {
-            let dir = target.join(folder);
-            fs::create_dir_all(&dir)
-                .with_context(|| format!("Failed to create {}", dir.display()))?;
-            fs::write(dir.join(".gitkeep"), "")
-                .with_context(|| format!("Failed to write .gitkeep in {}", dir.display()))?;
-        }
-    }
-
-    print_success(&target, full);
-    Ok(())
+    run(cli)
 }
 
 fn home_dir() -> Result<PathBuf> {
@@ -282,13 +268,6 @@ fn home_dir() -> Result<PathBuf> {
             "Cannot resolve home directory: neither HOME nor USERPROFILE is set. \
              Pass an explicit path.",
         )
-}
-
-fn resolve_target(path: Option<PathBuf>) -> Result<PathBuf> {
-    match path {
-        Some(p) => Ok(p),
-        None => Ok(home_dir()?.join(DEFAULT_VAULT_DIR)),
-    }
 }
 
 fn ensure_writable(target: &Path, force: bool) -> Result<()> {
@@ -320,62 +299,6 @@ fn ensure_writable(target: &Path, force: bool) -> Result<()> {
         );
     }
 
-    Ok(())
-}
-
-fn print_success(target: &Path, full: bool) {
-    println!();
-    println!("Vault scaffolded at {}", target.display());
-    println!();
-    println!("Shape:");
-    println!("  Core/");
-    println!("    Context/   (Profile.md, Projects.md, Current State.md)");
-    println!("    Sessions/  (session logs from /save)");
-    if full {
-        println!("  Projects/  (per-project thinking layer)");
-        println!("  Daily/     (daily notes)");
-        println!("  Tasks/     (short-term work queue)");
-        println!("  Inbox/     (unprocessed capture)");
-    }
-    println!();
-    println!("Next:");
-    println!("  1. (Optional) Seed your Profile and Projects from a few prompts:");
-    println!("       memcrate setup");
-    println!();
-    println!("  2. Install skills for your AI tool:");
-    println!("       memcrate install claude-code");
-    println!();
-    println!("  3. Start your AI tool. Run /load first to get oriented;");
-    println!("     /pin facts as you work; /save the session at the end.");
-    println!();
-    println!("You can also hand-edit the scaffolded files (they include");
-    println!("section guidance inline), but you should never *need* to.");
-    println!();
-    println!("Docs: https://memcrate.dev");
-    println!();
-}
-
-fn install(tool: Option<Tool>, target: Option<PathBuf>, force: bool) -> Result<()> {
-    let selected = match tool {
-        Some(t) => t,
-        None => prompt_for_tool()?,
-    };
-
-    let tools = selected.expand();
-
-    if target.is_some() && tools.len() > 1 {
-        bail!("--target installs one tool at a time. Pick a single tool, or drop --target.");
-    }
-
-    for t in tools {
-        let dest = match &target {
-            Some(p) => p.clone(),
-            None => t.skills_dir()?,
-        };
-        install_skills(t, &dest, force)?;
-    }
-
-    print_post_install();
     Ok(())
 }
 
@@ -463,179 +386,9 @@ fn install_skills(tool: Tool, dest: &Path, force: bool) -> Result<()> {
     Ok(())
 }
 
-fn print_post_install() {
-    println!();
-    println!("  /load   load your vault context at the start of a session");
-    println!("  /save   save the current session as a structured log");
-    println!("  /pin    promote an insight into your permanent context files");
-    println!();
-    println!("Next:");
-    println!("  1. Scaffold a vault if you don't have one yet:");
-    println!("       memcrate init ~/vault");
-    println!();
-    println!("  2. Start your tool, then run /load first to get oriented.");
-    println!("     End the session with /save. Use /pin when something is");
-    println!("     worth remembering forever.");
-    println!();
-    println!(
-        "First-time note: your tool will ask permission to read your vault's\n\
-         Profile.md the first time /load fires. The prompt will show the path\n\
-         (~/vault/Core/Context/Profile.md). Approve it once and the rest of\n\
-         the session runs clean."
-    );
-    println!();
-}
-
-fn prompt_for_tool() -> Result<Tool> {
-    if !io::stdin().is_terminal() {
-        bail!(
-            "No tool given and nothing to prompt with. Pass one explicitly:\n  \
-             memcrate install claude-code\n  memcrate install codex\n  memcrate install all"
-        );
-    }
-
-    println!("Which AI tool should Memcrate install the /load, /save, and /pin skills for?");
-    println!();
-    println!("  1. Claude Code   (~/.claude/skills/)");
-    println!("  2. Codex         (~/.codex/skills/)");
-    println!("  3. Both");
-    println!();
-
-    loop {
-        let answer = prompt_line("Choose 1, 2, or 3")?;
-        match answer.trim() {
-            "1" => return Ok(Tool::ClaudeCode),
-            "2" => return Ok(Tool::Codex),
-            "3" => return Ok(Tool::All),
-            "" => println!("Pick 1, 2, or 3."),
-            other => println!("'{}' is not one of the options. Pick 1, 2, or 3.", other),
-        }
-    }
-}
-
-fn resolve_setup_vault(path: Option<PathBuf>) -> Result<PathBuf> {
-    if let Some(p) = path {
-        return Ok(p);
-    }
-
-    if let Ok(cwd) = std::env::current_dir() {
-        if cwd.join(".memcrate").exists() {
-            return Ok(cwd);
-        }
-        let mut walk = cwd.as_path();
-        while let Some(parent) = walk.parent() {
-            if parent.join(".memcrate").exists() {
-                return Ok(parent.to_path_buf());
-            }
-            walk = parent;
-        }
-    }
-
-    if let Ok(home_path) = home_dir() {
-        let mut found: Vec<PathBuf> = Vec::new();
-        if let Ok(entries) = fs::read_dir(&home_path) {
-            for entry in entries.flatten() {
-                let p = entry.path();
-                if p.is_dir() && p.join(".memcrate").exists() {
-                    found.push(p);
-                }
-            }
-        }
-        found.sort();
-
-        match found.len() {
-            0 => {}
-            1 => return Ok(found.into_iter().next().unwrap()),
-            _ => {
-                let list: Vec<String> =
-                    found.iter().map(|p| format!("  {}", p.display())).collect();
-                bail!(
-                    "Multiple Memcrate vaults found in your home directory:\n{}\n\n\
-                     Pick one explicitly:\n  memcrate setup <path>",
-                    list.join("\n")
-                );
-            }
-        }
-
-        let default = home_path.join("vault");
-        if default.exists() {
-            return Ok(default);
-        }
-    }
-
-    bail!(
-        "No Memcrate vault found. Pass the vault path explicitly:\n  \
-         memcrate setup <path>\n\n\
-         Or scaffold a new vault first:\n  memcrate init ~/vault"
-    );
-}
-
 const IDENTITY_PLACEHOLDER: &str = "<!-- Who you are professionally. One paragraph. -->";
 const TOOLS_PLACEHOLDER: &str = "<!-- Editor, languages, runtimes, CLIs, default services. -->";
 const PROJECTS_DATE_PLACEHOLDER: &str = "last_updated: YYYY-MM-DD";
-
-fn setup(path: Option<PathBuf>, force: bool) -> Result<()> {
-    let vault = resolve_setup_vault(path)?;
-    let profile_path = vault.join("Core").join("Context").join("Profile.md");
-    let projects_path = vault.join("Core").join("Context").join("Projects.md");
-
-    if !profile_path.exists() || !projects_path.exists() {
-        bail!(
-            "Vault at {} is malformed: Core/Context/Profile.md or Projects.md \
-             is missing. Re-run `memcrate init {}` to repair the scaffold.",
-            vault.display(),
-            vault.display()
-        );
-    }
-
-    let profile_text = fs::read_to_string(&profile_path)
-        .with_context(|| format!("Failed to read {}", profile_path.display()))?;
-    let projects_text = fs::read_to_string(&projects_path)
-        .with_context(|| format!("Failed to read {}", projects_path.display()))?;
-
-    let profile_pristine = profile_text.contains(IDENTITY_PLACEHOLDER);
-    let projects_pristine = projects_text.contains("## Example Project");
-
-    if (!profile_pristine || !projects_pristine) && !force {
-        bail!(
-            "Profile.md or Projects.md has already been modified. \
-             Pass --force to overwrite, or hand-edit instead."
-        );
-    }
-
-    println!("Memcrate setup — populates Profile.md and Projects.md from your answers.");
-    println!("(Press Enter on any question to skip it. Ctrl-C aborts.)");
-    println!();
-    println!("Vault: {}", vault.display());
-    println!();
-
-    let name = prompt_line("Your name (or how you'd like to be referred to)")?;
-    let what_you_do = prompt_line("What do you do? (one short paragraph)")?;
-    let tools = prompt_line("Tools you always use (comma-separated)")?;
-    let projects = prompt_multiline("Active projects (one per line, blank line to finish)")?;
-
-    let today = today_iso();
-    let updated_profile = update_profile(&profile_text, &name, &what_you_do, &tools, &today);
-    let updated_projects = update_projects(&projects_text, &projects, &today);
-
-    fs::write(&profile_path, updated_profile)
-        .with_context(|| format!("Failed to write {}", profile_path.display()))?;
-    fs::write(&projects_path, updated_projects)
-        .with_context(|| format!("Failed to write {}", projects_path.display()))?;
-
-    println!();
-    println!("Updated:");
-    println!("  {}", profile_path.display());
-    println!("  {}", projects_path.display());
-    println!();
-    println!("Next:");
-    println!("  memcrate install claude-code");
-    println!("  claude");
-    println!("  /load   # your vault now has real context to load");
-    println!();
-
-    Ok(())
-}
 
 fn prompt_line(label: &str) -> Result<String> {
     print!("{}:\n> ", label);
@@ -946,12 +699,9 @@ mod tests {
         if home_dir().is_err() {
             return;
         }
-        let target = resolve_target(None).unwrap();
-        assert!(target.ends_with(DEFAULT_VAULT_DIR));
-        assert_eq!(
-            resolve_target(Some(PathBuf::from("/tmp/v"))).unwrap(),
-            PathBuf::from("/tmp/v")
-        );
+        let default = home_dir().unwrap().join(DEFAULT_VAULT_DIR);
+        assert!(default.ends_with(DEFAULT_VAULT_DIR));
+        assert!(default.starts_with(home_dir().unwrap()));
     }
 
     #[test]

@@ -70,7 +70,7 @@ Try in order:
 
 If all three fail, ask the user in plain English:
 
-> I couldn't find a Memcrate vault at `~/reference_vault`, in this directory, or anywhere one level deep in your home directory. Where is your vault? (Paste the absolute path. If you haven't set one up yet, run `memcrate init ~/reference_vault` and try again.)
+> I couldn't find a Memcrate vault at `~/reference_vault`, in this directory, or anywhere one level deep in your home directory. Where is your vault? (Paste the absolute path. If you haven't set one up yet, run `memcrate` and try again.)
 
 Then `Read <answer>/Core/Context/Profile.md` to confirm before proceeding.
 
