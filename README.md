@@ -138,10 +138,10 @@ Memcrate never replaces a skill it did not install. If you already have your own
 
 ```bash
 # Specific version (Linux / macOS)
-MEMCRATE_VERSION=v0.3.1 curl -fsSL https://raw.githubusercontent.com/memcrate/memcrate/main/install.sh | sh
+MEMCRATE_VERSION=v0.4.0 curl -fsSL https://raw.githubusercontent.com/memcrate/memcrate/main/install.sh | sh
 
 # Specific version (Windows)
-$env:MEMCRATE_VERSION="v0.3.1"; irm https://raw.githubusercontent.com/memcrate/memcrate/main/install.ps1 | iex
+$env:MEMCRATE_VERSION="v0.4.0"; irm https://raw.githubusercontent.com/memcrate/memcrate/main/install.ps1 | iex
 
 # Custom install dir on Linux / macOS (no sudo needed)
 MEMCRATE_INSTALL_DIR=$HOME/.local/bin curl -fsSL https://raw.githubusercontent.com/memcrate/memcrate/main/install.sh | sh

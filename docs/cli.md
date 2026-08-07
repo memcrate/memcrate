@@ -51,29 +51,24 @@ These are design targets for future releases. Names and shapes may change.
 
 ```bash
 memcrate --tool <name>             # More tools: claude-desktop, cursor, aider
-memcrate install --all             # Install for all detected tools
 memcrate update                    # Refresh skills from canonical source
 memcrate status                    # Show vault health: structure, skills installed, last save
 memcrate doctor                    # Diagnose problems (missing files, stale skills, broken symlinks)
 ```
 
-### `memcrate install <tool>` (more tools)
+### More tools
 
 - `claude-desktop` - builds `.skill` zips and prints UI install steps. Claude Desktop skills can't be programmatically registered.
 - `cursor` - writes `.cursorrules` at the vault root (or repo root if `--repo <path>` is passed).
 - `aider` - appends `read:` entries to `~/.aider.conf.yml` for the canonical files.
 
-### `memcrate install --all`
-
-Detects which AI tools are present on the machine (by checking for known config paths, binaries, or environment markers) and runs `install` for each. Reports skipped tools so you know what didn't apply.
-
-### `memcrate update`
+### `update`
 
 Refreshes installed skills from the canonical source (the public Memcrate repo) without recompiling the CLI. Users with local modifications opt out via `.memcrate-skills-pinned` (a marker file at vault root).
 
 `update` does *not* touch your `Profile.md`, `Projects.md`, `Current State.md`, or `Sessions/`. You own all content.
 
-### `memcrate status`
+### `status`
 
 Quick vault health check. Sketch:
 
@@ -87,7 +82,7 @@ Current State.md: 198 lines, last_updated 2026-05-10
 Sessions: 142 logs (oldest 2026-04-12, most recent 2026-05-10)
 ```
 
-### `memcrate doctor`
+### `doctor`
 
 Deeper diagnostic. Checks for:
 
@@ -134,13 +129,13 @@ Planned:
 
 ### Source of truth for skills
 
-The CLI bundles the canonical SKILL.md files into the binary at compile time, so `install` works offline and the installed skills always match the CLI version. The planned `memcrate update` will fetch the latest skill files from the public repo (HTTPS, no auth) without requiring a CLI upgrade.
+The CLI bundles the canonical SKILL.md files into the binary at compile time, so `install` works offline and the installed skills always match the CLI version. A planned `update` command would fetch the latest skill files from the public repo (HTTPS, no auth) without requiring a CLI upgrade.
 
 ### Auto-update vs. manual
 
 The CLI does not auto-update itself. Upgrade via your package manager (or re-run the install one-liner) on your own cadence. The dev tool aesthetic is "the CLI does what you tell it, nothing else."
 
-A `--check-update` flag on the planned `memcrate status` will report whether a newer skill or CLI version is available. No action taken without explicit command.
+A `--check-update` flag on a planned `status` command will report whether a newer skill or CLI version is available. No action taken without explicit command.
 
 ## What the CLI explicitly doesn't do
 

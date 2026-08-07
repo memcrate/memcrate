@@ -46,9 +46,9 @@ Three reasons:
 
 ## Minimum vs. full
 
-The "minimum" install is just `Core/` + a `README.md`. No optional folders. The verbs work the same. The CLI calls this `memcrate init` (the default).
+The "minimum" install is just `Core/` + a `README.md`. No optional folders. The verbs work the same. This is what `memcrate` creates by default.
 
-The "full" install is `Core/` + every optional folder pre-scaffolded as empty buckets. Useful when you know you want the personal-OS scope from day one. The CLI calls this `memcrate init --full`.
+The "full" install is `Core/` + every optional folder pre-scaffolded as empty buckets. Useful when you know you want the personal-OS scope from day one. Add `--full` to get it: `memcrate --full`.
 
 Both are the same vault. The optional folders are just there or not. You can add them later by running `mkdir Projects` (or `Daily`, etc.) - the verbs won't notice, and they don't need to.
 
@@ -56,7 +56,7 @@ Both are the same vault. The optional folders are just there or not. You can add
 
 Skills locate the vault by attempting to read `Core/Context/Profile.md` from two candidates, in order:
 
-1. **`~/memcrate-vault/`** - Memcrate's default install path (`memcrate init ~/memcrate-vault`).
+1. **`~/memcrate-vault/`** - Memcrate's default install path. Choose another with `memcrate --vault <path>`.
 2. **The current working directory** - handles users who `cd`'d into a non-default vault before launching their tool.
 
 If both reads miss, the skill asks the user in plain English where their vault is, then reads from the answer. Per-tool implementations should use a file-read primitive (not shell expansion) for these checks so permission prompts stay legible.
@@ -68,7 +68,7 @@ Inside the located vault, canonical files always live at:
 - `<vault>/Core/Context/Current State.md`
 - `<vault>/Core/Sessions/`
 
-No alternates. No fallbacks. If they're not there, the vault is malformed and `memcrate doctor` flags it.
+No alternates. No fallbacks. If they're not there, the vault is malformed and the verbs say so rather than guessing.
 
 ## Schema highlights
 
@@ -131,7 +131,7 @@ Memcrate is local-first and storage-agnostic. The vault is just a folder; sync i
 - **Git** - strong choice if you're comfortable with the workflow; gives diff history for free.
 - **Syncthing / `rsync`** - for self-hosted setups.
 
-Memcrate doesn't bundle a sync solution. The CLI's `memcrate init` may prompt for a recommendation but you always pick.
+Memcrate doesn't bundle a sync solution. The CLI does not touch sync at all; that choice stays yours.
 
 ## What's not in the vault
 
