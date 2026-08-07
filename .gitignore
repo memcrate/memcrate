@@ -23,11 +23,15 @@ node_modules/
 dist/
 build/
 
-# Local user vaults — if anyone runs `memcrate init` inside this repo
-# they should not commit their personal vault back. Reference vault is the
-# only vault that lives in this repo, and it lives at reference-vault/.
+# Local user vaults. If anyone points `memcrate` at a path inside this repo,
+# their personal vault should not get committed back. The only vault that
+# belongs here is the template at reference-vault/.
 /vault/
 /my-vault/
+/memcrate-vault/
+
+# Browser-testing artifacts
+.playwright-mcp/
 
 # leak-check tuning. Untracked on purpose: these hold private terms and
 # maintainer-specific exceptions that must never ship in a public repo.

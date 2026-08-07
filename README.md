@@ -154,7 +154,9 @@ Pre-built binaries on the [releases page](https://github.com/memcrate/memcrate/r
 
 ## About `reference-vault/`
 
-A starter vault scaffold (same shape as the "What your vault looks like" diagram above), shipped inside the CLI binary and extracted when you run `memcrate`. Each canonical file has section guidance inline so AI tools know what belongs where when `/pin` writes to it. You can also copy `reference-vault/` directly into any directory if you'd rather skip the CLI.
+This is the template, not a vault you use. It is the canonical shape of a Memcrate vault (same as the "What your vault looks like" diagram above), compiled into the CLI binary and stamped out at whatever path you choose when you run `memcrate`, which defaults to `~/memcrate-vault`.
+
+The two names are deliberately different: `reference-vault/` is the mold, `~/memcrate-vault` is the copy on your disk. Each canonical file has section guidance inline so AI tools know what belongs where when `/pin` writes to it. You can also copy `reference-vault/` directly into any directory if you'd rather skip the CLI.
 
 ## Development
 

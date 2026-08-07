@@ -1,8 +1,8 @@
-Memcrate Format Spec — CC0 1.0 Universal (Public Domain Dedication)
+Memcrate Format Spec - CC0 1.0 Universal (Public Domain Dedication)
 
-The contents of the `docs/` directory in this repository — the format
+The contents of the `docs/` directory in this repository, namely the format
 specification for Memcrate vaults, including the directory shape, verb
-contracts, frontmatter schema, and skill conventions — are dedicated to the
+contracts, frontmatter schema, and skill conventions, are dedicated to the
 public domain under CC0 1.0.
 
 To the extent possible under law, Brad Traversy has waived all copyright and
@@ -17,4 +17,4 @@ Full text of CC0 1.0: https://creativecommons.org/publicdomain/zero/1.0/legalcod
 
 Note: this CC0 dedication applies ONLY to the format spec in `docs/`. The
 Memcrate code (skills, CLI, install scripts, anything outside `docs/`) is
-licensed separately under MIT — see LICENSE.
+licensed separately under MIT. See LICENSE.
