@@ -108,8 +108,8 @@ try {
 
     Write-Info ""
     Write-Info "Next:"
-    Write-Info "  memcrate init `$HOME\vault    # scaffold a vault"
-    Write-Info "  memcrate --help              # see available commands"
+    Write-Info "  memcrate                     # set up your vault and skills"
+    Write-Info "  memcrate --help              # see the options"
     Write-Info "  https://memcrate.dev         # docs"
 } finally {
     Remove-Item -Recurse -Force $tmp -ErrorAction SilentlyContinue

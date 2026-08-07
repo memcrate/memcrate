@@ -460,7 +460,7 @@ fn install_skills(tool: Tool, dest: &Path, force: bool) -> Result<()> {
         let marker = dest.join(name).join(SKILL_MARKER);
         fs::write(
             &marker,
-            "Installed by Memcrate. Safe for `memcrate install --force` to replace.\n",
+            "Installed by Memcrate. Safe for memcrate to replace.\n",
         )
         .with_context(|| format!("Failed to write {}", marker.display()))?;
     }

@@ -139,8 +139,8 @@ main() {
 
     info ""
     info "Next:"
-    info "  memcrate init ~/vault    # scaffold a vault"
-    info "  memcrate --help          # see available commands"
+    info "  memcrate                 # set up your vault and skills"
+    info "  memcrate --help          # see the options"
     info "  https://memcrate.dev     # docs"
 }
 

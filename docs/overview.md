@@ -25,7 +25,7 @@ A markdown directory + three verbs + per-tool skill packs.
 
 1. **Markdown-first.** Every artifact is a `.md` file you can read in any editor. The vault works without any tool installed.
 2. **Local-first.** It lives on your filesystem. Sync via Obsidian Sync, iCloud, Dropbox, git - your call. No cloud account required.
-3. **Tool-agnostic.** Any AI assistant that reads files in a directory can use the vault. Skill packs make it ergonomic for specific tools (Claude Code, Claude Desktop, Cursor, Aider) but they're optional.
+3. **Tool-agnostic.** Any AI assistant that reads files in a directory can use the vault. Skill packs make it ergonomic for specific tools (Claude Code and Codex today, with Claude Desktop, Cursor, and Aider planned) but they're optional.
 4. **Human and AI both first-class.** The vault is your second brain *and* your AI's continuity layer. Same files serve both.
 5. **Vault = source of truth.** CLI, skills, MCP - all interfaces *to* the vault. None of them own the data.
 
@@ -45,7 +45,7 @@ The verbs are *conveniences* - you can manually edit any vault file at any time.
 |---|---|---|---|---|---|
 | Storage | `CC-Session-Logs/` per project | Cloud, vendor DB | Single static file | Server-managed | Local markdown vault |
 | Scope | Session memory | Conversation memory | Project rules | Conversation memory | Personal context (projects, sessions, decisions, weekly state) |
-| Tools | Claude Code | Multi-tool via SDK/API | Tool-specific | MCP-aware tools | Any tool that reads files; ergonomic skills for major tools |
+| Tools | Claude Code | Multi-tool via SDK/API | Tool-specific | MCP-aware tools | Any tool that reads files; skills for Claude Code and Codex today |
 | Human-readable | Yes (markdown) | API / dashboard | Yes | No (binary) | Yes (markdown, native to any editor) |
 | Vendor lock-in | None | Yes (cloud) | None | None | None |
 | Philosophy | One-purpose pack | Memory-as-a-service | Static prompt | Live API | Vault as personal OS |
