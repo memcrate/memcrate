@@ -606,7 +606,9 @@ fn update_projects(text: &str, projects: &[String], today: &str) -> String {
 
 fn project_to_section(line: &str) -> String {
     let line = line.trim();
-    let (name, desc) = if let Some((n, d)) = line.split_once(" - ") {
+    // Matches what a user might type, so the em dash stays: macOS substitutes
+    // one automatically when you type a hyphen surrounded by spaces.
+    let (name, desc) = if let Some((n, d)) = line.split_once(" \u{2014} ") {
         (n.trim(), Some(d.trim()))
     } else if let Some((n, d)) = line.split_once(" - ") {
         (n.trim(), Some(d.trim()))
