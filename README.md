@@ -49,25 +49,15 @@ memcrate/
 
 ## Getting started
 
-Install the CLI, then run `memcrate`. That is the whole setup.
+Install the CLI, then run `memcrate`. One question, then it does the rest.
 
 ```
 $ memcrate
-
-Memcrate creates a markdown vault your AI tools can read, then installs
-the /load, /save, and /pin skills for Claude Code and Codex.
-Press Enter to accept a default, or Ctrl-C to stop.
 
 Where should your vault live? [~/reference_vault]:
 >
 
 Created your vault at ~/reference_vault.
-
-A few questions so your tools know who you are. Enter skips any of them.
-
-Your name (or how you'd like to be referred to):
-> Jane Dev
-...
 
 Installed 3 skills for Claude Code to ~/.claude/skills
 Installed 3 skills for Codex to ~/.codex/skills
@@ -78,7 +68,15 @@ You now have three verbs in Claude Code and Codex:
   /save   write a session log before you finish.
 ```
 
-Re-running is safe. It reuses an existing vault, leaves answers you already gave alone, and refreshes the skills.
+Re-running is safe. It reuses an existing vault and refreshes the skills.
+
+Optionally, tell your tools who you are:
+
+```bash
+memcrate profile
+```
+
+Four questions (name, what you build, tools, projects) that fill in `Profile.md` and `Projects.md` so your first `/load` has something to read. Everything works without it; you can also just edit those two files by hand, or let `/pin` fill them in as you work.
 
 ### Install the CLI
 

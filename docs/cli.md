@@ -17,20 +17,29 @@ memcrate --yes                # take every default, ask nothing
 memcrate --full               # also create Projects/, Daily/, Tasks/, Inbox/
 ```
 
-There is one command. Running it:
+Running it:
 
-1. Asks where the vault should live, defaulting to `~/reference_vault`. If the path exists and is already a Memcrate vault it is reused; if it exists with other content in it, you are asked for a different path.
+1. Asks where the vault should live, defaulting to `~/reference_vault`. An existing Memcrate vault at that path is reused; a path with other content in it makes it ask again.
 2. Creates the vault: `Core/Context/{Profile,Projects,Current State}.md`, `Core/Sessions/`, and a `.memcrate` marker so tools can find it from any subdirectory.
-3. Asks four short questions (name, what you do, tools, active projects) and writes the answers into `Profile.md` and `Projects.md`. Enter skips any of them, and the step is skipped entirely if those files already have content, so re-running never clobbers real answers.
-4. Installs the `/load`, `/save`, and `/pin` skills into `~/.claude/skills/` and `~/.codex/skills/`. Claude Code and Codex read the same `SKILL.md` format, so one canonical set of skills serves both.
+3. Installs the `/load`, `/save`, and `/pin` skills into `~/.claude/skills/` and `~/.codex/skills/`. Claude Code and Codex read the same `SKILL.md` format, so one canonical set of skills serves both.
 
-Re-running is safe and idempotent.
+That is the whole setup, and it is idempotent.
 
-`--yes` is implied when there is no terminal, so `memcrate` works unattended in a script, a Dockerfile, or CI without hanging on a prompt. Combined with `--vault`, that is the scripted form:
+`--yes` is implied when there is no terminal, so `memcrate` works unattended in a script, a Dockerfile, or CI without hanging on a prompt.
+
+## `memcrate profile`
 
 ```bash
-memcrate --vault ~/notes --yes
+memcrate profile              # find the vault automatically
+memcrate profile ~/notes      # explicit path
+memcrate profile --force      # answer again and overwrite
 ```
+
+Optional, and deliberately separate from setup: nothing about Memcrate depends on it. It asks four questions (name, what you build, tools you use daily, projects you're working on) and writes the answers into `Profile.md` and `Projects.md` so the first `/load` has real content instead of an empty scaffold. Enter skips any question.
+
+It refuses to overwrite files that already have content unless you pass `--force`, so it is safe to run by accident. The vault is found the same way the skills find it: an explicit path, then the current directory or any parent with a `.memcrate` marker, then a single vault in your home directory.
+
+The alternative to running it at all is editing `Profile.md` and `Projects.md` directly, or letting `/pin` build them up as you work.
 
 ### Skill ownership
 

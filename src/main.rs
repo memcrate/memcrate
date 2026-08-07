@@ -1,5 +1,5 @@
 use anyhow::{bail, Context, Result};
-use clap::{Parser, ValueEnum};
+use clap::{Parser, Subcommand, ValueEnum};
 use include_dir::{include_dir, Dir};
 use std::fs;
 use std::io::{self, BufRead, IsTerminal, Write};
@@ -25,6 +25,9 @@ const SKILL_MARKER: &str = ".memcrate-skill";
     long_about = "Memcrate creates a portable, local-first markdown vault and installs the /load, /save, and /pin skills for Claude Code and Codex. Run it with no arguments for the guided setup."
 )]
 struct Cli {
+    #[command(subcommand)]
+    command: Option<Commands>,
+
     /// Where the vault should live. Skips the location prompt.
     #[arg(long, value_name = "PATH")]
     vault: Option<PathBuf>,
@@ -36,6 +39,19 @@ struct Cli {
     /// Also create the optional folders (Projects/, Daily/, Tasks/, Inbox/).
     #[arg(long)]
     full: bool,
+}
+
+#[derive(Subcommand)]
+enum Commands {
+    /// Answer a few questions to fill in your Profile and Projects files.
+    Profile {
+        /// Path to the vault. Found automatically when omitted.
+        path: Option<PathBuf>,
+
+        /// Rewrite the files even if they already have content.
+        #[arg(long)]
+        force: bool,
+    },
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, ValueEnum)]
@@ -120,10 +136,6 @@ fn run(cli: Cli) -> Result<()> {
         println!("Added the optional folders: Projects, Daily, Tasks, Inbox.");
     }
 
-    if ask {
-        seed_profile(&vault)?;
-    }
-
     println!();
 
     // One tool failing should not cost the user the other one.
@@ -152,36 +164,57 @@ fn run(cli: Cli) -> Result<()> {
     println!("  /pin    promote a fact into your permanent context files.");
     println!("  /save   write a session log before you finish.");
     println!();
+    println!("Optional: `memcrate profile` answers a few questions about you so");
+    println!("your first /load has something to read.");
+    println!();
     Ok(())
 }
 
-/// Fills Profile.md and Projects.md from four questions. Skipped silently when
-/// the files already have content, so re-running never clobbers real answers.
-fn seed_profile(vault: &Path) -> Result<()> {
+/// `memcrate profile`: fill in Profile.md and Projects.md from a few questions.
+/// Optional, and separate from setup on purpose. Everything works without it.
+fn profile(path: Option<PathBuf>, force: bool) -> Result<()> {
+    let vault = find_vault(path)?;
     let profile_path = vault.join("Core").join("Context").join("Profile.md");
     let projects_path = vault.join("Core").join("Context").join("Projects.md");
 
-    let profile_text = match fs::read_to_string(&profile_path) {
-        Ok(t) => t,
-        Err(_) => return Ok(()),
-    };
-    let projects_text = fs::read_to_string(&projects_path).unwrap_or_default();
-
-    if !profile_text.contains(IDENTITY_PLACEHOLDER) && !projects_text.contains("## Example Project")
-    {
-        return Ok(());
+    if !profile_path.exists() || !projects_path.exists() {
+        bail!(
+            "{} does not look like a Memcrate vault: Core/Context/Profile.md is missing.\n\
+             Run `memcrate` first to create one.",
+            vault.display()
+        );
     }
 
-    println!();
-    println!("A few questions so your tools know who you are. Enter skips any of them.");
+    let profile_text = fs::read_to_string(&profile_path)
+        .with_context(|| format!("Failed to read {}", profile_path.display()))?;
+    let projects_text = fs::read_to_string(&projects_path)
+        .with_context(|| format!("Failed to read {}", projects_path.display()))?;
+
+    let untouched =
+        profile_text.contains(IDENTITY_PLACEHOLDER) || projects_text.contains("## Example Project");
+    if !untouched && !force {
+        bail!(
+            "Profile.md and Projects.md already have content. Edit them directly, or \
+             pass --force to answer the questions again and overwrite."
+        );
+    }
+
+    println!("Filling in {}", vault.display());
+    println!("Press Enter to skip any question.");
     println!();
 
-    let name = prompt_line("Your name (or how you'd like to be referred to)")?;
-    let what_you_do = prompt_line("What do you do? (one short paragraph)")?;
-    let tools = prompt_line("Tools you always use (comma-separated)")?;
-    let projects = prompt_multiline("Active projects (one per line, blank line to finish)")?;
+    let name = prompt_line("Your name")?;
+    let what_you_do =
+        prompt_line("What do you build? (e.g. \"Full-stack web apps, mostly React and Node\")")?;
+    let tools = prompt_line(
+        "Tools you use daily, comma-separated (e.g. \"VS Code, TypeScript, Postgres\")",
+    )?;
+    let projects = prompt_multiline(
+        "Projects you're working on, one per line (e.g. \"Acme Dashboard: internal analytics tool\").\nBlank line when done",
+    )?;
 
     if name.is_empty() && what_you_do.is_empty() && tools.is_empty() && projects.is_empty() {
+        println!("Nothing entered, left your files alone.");
         return Ok(());
     }
 
@@ -197,8 +230,60 @@ fn seed_profile(vault: &Path) -> Result<()> {
     )
     .with_context(|| format!("Failed to write {}", projects_path.display()))?;
 
+    println!();
     println!("Saved to Profile.md and Projects.md.");
+    println!("Your tools will read these on the next /load.");
     Ok(())
+}
+
+/// Locate a vault: explicit path, then the current directory or a parent with a
+/// marker, then a single vault in the home directory, then the default.
+fn find_vault(path: Option<PathBuf>) -> Result<PathBuf> {
+    if let Some(p) = path {
+        return expand_home(&p.to_string_lossy());
+    }
+
+    if let Ok(cwd) = std::env::current_dir() {
+        let mut walk: Option<&Path> = Some(cwd.as_path());
+        while let Some(dir) = walk {
+            if dir.join(".memcrate").exists() {
+                return Ok(dir.to_path_buf());
+            }
+            walk = dir.parent();
+        }
+    }
+
+    if let Ok(home) = home_dir() {
+        let mut found: Vec<PathBuf> = Vec::new();
+        if let Ok(entries) = fs::read_dir(&home) {
+            for entry in entries.flatten() {
+                let p = entry.path();
+                if p.is_dir() && p.join(".memcrate").exists() {
+                    found.push(p);
+                }
+            }
+        }
+        found.sort();
+        match found.len() {
+            1 => return Ok(found.into_iter().next().unwrap()),
+            n if n > 1 => {
+                let list: Vec<String> =
+                    found.iter().map(|p| format!("  {}", p.display())).collect();
+                bail!(
+                    "Found more than one vault:\n{}\n\nPick one:\n  memcrate profile <path>",
+                    list.join("\n")
+                );
+            }
+            _ => {}
+        }
+
+        let default = home.join(DEFAULT_VAULT_DIR);
+        if default.exists() {
+            return Ok(default);
+        }
+    }
+
+    bail!("No vault found. Run `memcrate` to create one, or pass the path:\n  memcrate profile <path>")
 }
 
 fn tool_list(installed: usize) -> &'static str {
@@ -257,7 +342,10 @@ fn expand_home(input: &str) -> Result<PathBuf> {
 
 fn main() -> Result<()> {
     let cli = Cli::parse();
-    run(cli)
+    match cli.command {
+        Some(Commands::Profile { path, force }) => profile(path, force),
+        None => run(cli),
+    }
 }
 
 fn home_dir() -> Result<PathBuf> {
