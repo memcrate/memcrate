@@ -60,7 +60,7 @@ A vault folder is **not required** for a project — many projects have entries 
 
 Try in order:
 
-1. **Read `~/vault/Core/Context/Profile.md`** — the default install location. If Read returns content, `<vault>` = `~/vault`.
+1. **Read `~/reference_vault/Core/Context/Profile.md`** — the default install location. If Read returns content, `<vault>` = `~/reference_vault`.
 2. **Read `<cwd>/Core/Context/Profile.md`** — handles users who `cd`'d into their vault before launching the tool. Use the absolute working-directory path from your session context.
 3. **Depth-1 scan of the home directory** for `*/Core/Context/Profile.md`, which finds vaults at custom paths like `~/myvault`. Resolve `<home>` from your session context (typically `/home/<user>` on Linux, `/Users/<user>` on macOS, `C:\Users\<user>` on Windows).
     - **Claude Code:** Glob with `path: <home>` and `pattern: "*/Core/Context/Profile.md"`.
@@ -70,7 +70,7 @@ Try in order:
 
 If all three fail, ask the user in plain English:
 
-> I couldn't find a Memcrate vault at `~/vault`, in this directory, or anywhere one level deep in your home directory. Where is your vault? (Paste the absolute path. If you haven't set one up yet, run `memcrate init ~/vault` and try again.)
+> I couldn't find a Memcrate vault at `~/reference_vault`, in this directory, or anywhere one level deep in your home directory. Where is your vault? (Paste the absolute path. If you haven't set one up yet, run `memcrate init ~/reference_vault` and try again.)
 
 Then `Read <answer>/Core/Context/Profile.md` to confirm before proceeding.
 

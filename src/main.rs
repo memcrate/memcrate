@@ -26,14 +26,14 @@ const SKILL_MARKER: &str = ".memcrate-skill";
 )]
 struct Cli {
     #[command(subcommand)]
-    command: Commands,
+    command: Option<Commands>,
 }
 
 #[derive(Subcommand)]
 enum Commands {
-    /// Scaffold a new vault at the given path (default: ~/vault).
+    /// Scaffold a new vault at the given path (default: ~/reference_vault).
     Init {
-        /// Path where the vault should be created. Defaults to ~/vault.
+        /// Path where the vault should be created. Defaults to ~/reference_vault.
         path: Option<PathBuf>,
 
         /// Also scaffold optional human-only folders (Projects/, Daily/, Tasks/, Inbox/).
@@ -111,9 +111,134 @@ impl Tool {
     }
 }
 
+const DEFAULT_VAULT_DIR: &str = "reference_vault";
+
+/// `memcrate` with no arguments: ask where the vault goes, create it, and
+/// install the skills for every supported tool. One command, one question.
+fn guided_setup() -> Result<()> {
+    if !io::stdin().is_terminal() {
+        bail!(
+            "memcrate with no arguments runs an interactive setup, but there is no \
+             terminal to prompt on.\nUse the explicit commands instead:\n  \
+             memcrate init <path>\n  memcrate install all"
+        );
+    }
+
+    let default = home_dir()?.join(DEFAULT_VAULT_DIR);
+
+    println!("Memcrate sets up a markdown vault your AI tools can read, then installs");
+    println!("the /load, /save, and /pin skills for Claude Code and Codex.");
+    println!();
+
+    let vault = ask_vault_path(&default)?;
+    let existed = vault.join(".memcrate").exists();
+
+    if existed {
+        println!("Using the existing vault at {}.", vault.display());
+    } else {
+        ensure_writable(&vault, false)?;
+        fs::create_dir_all(&vault)
+            .with_context(|| format!("Failed to create {}", vault.display()))?;
+        REFERENCE_VAULT
+            .extract(&vault)
+            .with_context(|| format!("Failed to extract reference vault to {}", vault.display()))?;
+        println!("Created your vault at {}.", vault.display());
+    }
+
+    println!();
+
+    // A failure for one tool should not cost the user the whole run.
+    let mut installed = 0;
+    let mut problems: Vec<String> = Vec::new();
+    for tool in Tool::All.expand() {
+        let dest = tool.skills_dir()?;
+        match install_skills(tool, &dest, true) {
+            Ok(()) => installed += 1,
+            Err(e) => problems.push(format!("{}: {}", tool.label(), first_line(&e.to_string()))),
+        }
+    }
+
+    for p in &problems {
+        println!("Skipped {}", p);
+    }
+    if !problems.is_empty() {
+        println!();
+        println!("Memcrate never replaces a skill it did not install. Rename or remove");
+        println!("the listed skill(s) and re-run if you want Memcrate's versions.");
+    }
+
+    println!();
+    println!("You now have three verbs in {}:", tool_list(installed));
+    println!("  /load   read your vault and get oriented. Run this first.");
+    println!("  /pin    promote a fact into your permanent context files.");
+    println!("  /save   write a session log before you finish.");
+    println!();
+    println!("Optional: `memcrate setup` asks four questions and fills in your");
+    println!("Profile and Projects so day-one /load has real context to read.");
+    println!();
+    Ok(())
+}
+
+fn tool_list(installed: usize) -> &'static str {
+    match installed {
+        2 => "Claude Code and Codex",
+        1 => "your tool",
+        _ => "no tools",
+    }
+}
+
+fn first_line(s: &str) -> String {
+    s.lines().next().unwrap_or(s).to_string()
+}
+
+fn ask_vault_path(default: &Path) -> Result<PathBuf> {
+    loop {
+        let answer = prompt_line(&format!(
+            "Where should your vault live? [{}]",
+            default.display()
+        ))?;
+        let chosen = if answer.is_empty() {
+            default.to_path_buf()
+        } else {
+            expand_home(&answer)?
+        };
+
+        if chosen.exists() && !chosen.join(".memcrate").exists() {
+            let empty = fs::read_dir(&chosen)
+                .map(|mut d| d.next().is_none())
+                .unwrap_or(false);
+            if !empty {
+                println!(
+                    "{} already exists and is not empty, and it is not a Memcrate vault.",
+                    chosen.display()
+                );
+                println!("Pick a different path.");
+                println!();
+                continue;
+            }
+        }
+        return Ok(chosen);
+    }
+}
+
+/// Shells expand `~` before we ever see it, but a typed answer keeps it literal.
+fn expand_home(input: &str) -> Result<PathBuf> {
+    let trimmed = input.trim();
+    if trimmed == "~" {
+        return home_dir();
+    }
+    if let Some(rest) = trimmed.strip_prefix("~/") {
+        return Ok(home_dir()?.join(rest));
+    }
+    Ok(PathBuf::from(trimmed))
+}
+
 fn main() -> Result<()> {
     let cli = Cli::parse();
-    match cli.command {
+    let Some(command) = cli.command else {
+        return guided_setup();
+    };
+    match command {
         Commands::Init { path, full, force } => init(path, full, force),
         Commands::Install {
             tool,
@@ -162,7 +287,7 @@ fn home_dir() -> Result<PathBuf> {
 fn resolve_target(path: Option<PathBuf>) -> Result<PathBuf> {
     match path {
         Some(p) => Ok(p),
-        None => Ok(home_dir()?.join("vault")),
+        None => Ok(home_dir()?.join(DEFAULT_VAULT_DIR)),
     }
 }
 
@@ -329,20 +454,20 @@ fn install_skills(tool: Tool, dest: &Path, force: bool) -> Result<()> {
         .with_context(|| format!("Failed to write {}", marker.display()))?;
     }
 
-    println!();
     println!(
-        "Installed {} skill(s) for {} to {}:",
+        "Installed {} skills for {} to {}",
         names.len(),
         tool.label(),
         dest.display()
     );
-    println!("  /load   load your vault context at the start of a session");
-    println!("  /save   save the current session as a structured log");
-    println!("  /pin    promote an insight into your permanent context files");
     Ok(())
 }
 
 fn print_post_install() {
+    println!();
+    println!("  /load   load your vault context at the start of a session");
+    println!("  /save   save the current session as a structured log");
+    println!("  /pin    promote an insight into your permanent context files");
     println!();
     println!("Next:");
     println!("  1. Scaffold a vault if you don't have one yet:");
@@ -800,6 +925,33 @@ mod tests {
         assert_eq!(d.len(), 10);
         assert_eq!(&d[4..5], "-");
         assert_eq!(&d[7..8], "-");
+    }
+
+    #[test]
+    fn typed_tilde_paths_expand_to_the_home_dir() {
+        let home = match home_dir() {
+            Ok(h) => h,
+            Err(_) => return,
+        };
+        assert_eq!(expand_home("~").unwrap(), home);
+        assert_eq!(expand_home("~/notes").unwrap(), home.join("notes"));
+        assert_eq!(expand_home("  ~/notes  ").unwrap(), home.join("notes"));
+        assert_eq!(expand_home("/tmp/x").unwrap(), PathBuf::from("/tmp/x"));
+        // A leading "~" that is not a path separator is a real directory name.
+        assert_eq!(expand_home("~notes").unwrap(), PathBuf::from("~notes"));
+    }
+
+    #[test]
+    fn default_vault_lives_in_the_home_dir() {
+        if home_dir().is_err() {
+            return;
+        }
+        let target = resolve_target(None).unwrap();
+        assert!(target.ends_with(DEFAULT_VAULT_DIR));
+        assert_eq!(
+            resolve_target(Some(PathBuf::from("/tmp/v"))).unwrap(),
+            PathBuf::from("/tmp/v")
+        );
     }
 
     #[test]

@@ -11,7 +11,7 @@ This package is a thin wrapper. On install it downloads the `memcrate` binary fo
 ## Quick start
 
 ```bash
-memcrate init ~/vault    # scaffold a vault
+memcrate init ~/reference_vault    # scaffold a vault
 memcrate setup           # seed Profile.md and Projects.md from 4 prompts
 memcrate install         # install /load, /save, /pin for Claude Code and/or Codex
 ```

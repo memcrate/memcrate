@@ -13,7 +13,7 @@ Memcrate is a local markdown vault plus three verbs (`/save`, `/pin`, `/load`) t
 ## What your vault looks like
 
 ```
-~/vault/
+~/reference_vault/
 ├── README.md
 ├── .memcrate                  # marker file (lets tools find this vault)
 └── Core/
@@ -49,7 +49,26 @@ memcrate/
 
 ## Getting started
 
-A full first-time setup is five steps.
+Install the CLI, then run `memcrate`. It asks one question and does the rest.
+
+```
+$ memcrate
+
+Where should your vault live? [~/reference_vault]:
+>
+
+Created your vault at ~/reference_vault.
+
+Installed 3 skills for Claude Code to ~/.claude/skills
+Installed 3 skills for Codex to ~/.codex/skills
+
+You now have three verbs in Claude Code and Codex:
+  /load   read your vault and get oriented. Run this first.
+  /pin    promote a fact into your permanent context files.
+  /save   write a session log before you finish.
+```
+
+That is the whole setup. The individual commands below exist for scripting and for when you want finer control.
 
 ### 1. Install the CLI
 
@@ -94,10 +113,10 @@ memcrate --version
 ### 2. Scaffold your vault
 
 ```bash
-memcrate init ~/vault
+memcrate init ~/reference_vault
 ```
 
-You can use any path — `~/vault` is just the default convention. The command creates `~/vault/Core/Context/{Profile,Projects,Current State}.md` and `~/vault/Core/Sessions/` for session logs, plus a `.memcrate` marker file so tools can find the vault from any subdirectory.
+You can use any path — `~/reference_vault` is just the default convention. The command creates `~/reference_vault/Core/Context/{Profile,Projects,Current State}.md` and `~/reference_vault/Core/Sessions/` for session logs, plus a `.memcrate` marker file so tools can find the vault from any subdirectory.
 
 ### 3. Populate your vault (optional but recommended)
 
@@ -113,7 +132,7 @@ Asks four short questions — your name, what you do, tools you always use, acti
 2. Current working directory if it has a `.memcrate` marker
 3. Any parent directory with a `.memcrate` marker (git-style upward walk)
 4. A single vault in `$HOME` (scanned at depth 1)
-5. `~/vault` as a final fallback
+5. `~/reference_vault` as a final fallback
 
 Skip this step if you'd rather populate everything via `/pin` once you're in an AI tool. You can also hand-edit `Profile.md` and `Projects.md` directly — they include section guidance inline — but you shouldn't need to.
 
@@ -143,7 +162,7 @@ Start an AI tool session in or near your vault, then:
 - **`/pin <insight>`** — promote a fact into `Profile.md`, `Projects.md`, or `Current State.md` so it survives across sessions.
 - **`/save`** — write a session log to `Core/Sessions/` when you're done so the next `/load` can pick up where this one left off.
 
-The skills look for your vault by reading `~/vault/Core/Context/Profile.md` first, then the current working directory, then a depth-1 scan of your home directory (so custom paths like `~/myvault` are found automatically). If nothing matches, `/load` asks you in plain English where your vault is on first use.
+The skills look for your vault by reading `~/reference_vault/Core/Context/Profile.md` first, then the current working directory, then a depth-1 scan of your home directory (so custom paths like `~/myvault` are found automatically). If nothing matches, `/load` asks you in plain English where your vault is on first use.
 
 ## Advanced install options
 

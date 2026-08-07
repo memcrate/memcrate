@@ -11,7 +11,7 @@ The CLI is Memcrate's install layer - it scaffolds vaults and distributes skills
 ## Shipped commands
 
 ```bash
-memcrate init [path]               # Scaffold a vault at path (default: ~/vault)
+memcrate init [path]               # Scaffold a vault at path (default: ~/reference_vault)
 memcrate setup [path]              # Populate Profile.md and Projects.md from 4 prompts
 memcrate install [tool]            # Install /save, /pin, /load skills (asks if tool omitted)
 ```
@@ -20,7 +20,7 @@ memcrate install [tool]            # Install /save, /pin, /load skills (asks if 
 
 Scaffolds a new vault.
 
-- Default path: `~/vault`
+- Default path: `~/reference_vault`
 - Default shape: `Core/` + `README.md` + `.memcrate` marker, nothing else (per [vault-structure.md](vault-structure.md)).
 - `--full` flag also scaffolds the optional folders (`Projects/`, `Daily/`, `Tasks/`, `Inbox/`) as empty buckets, useful when you know you want the personal-OS scope from day one.
 - `--force` flag overwrites an existing vault (or scaffolds into a non-empty directory).
@@ -33,7 +33,7 @@ After `init`, the vault is scaffolded but empty of personal content (no project 
 
 Interactive wizard that populates `Profile.md` and `Projects.md` from four short questions: your name, what you do, tools you always use, and active projects (one per line). Press Enter to skip any question.
 
-- Finds the vault automatically when `path` is omitted. Resolution order: current directory with a `.memcrate` marker, then an upward walk to any parent with a marker, then a single marked vault at depth 1 in your home directory, then `~/vault`.
+- Finds the vault automatically when `path` is omitted. Resolution order: current directory with a `.memcrate` marker, then an upward walk to any parent with a marker, then a single marked vault at depth 1 in your home directory, then `~/reference_vault`.
 - Refuses to overwrite hand-edited files; `--force` overrides.
 - Only touches `Profile.md` and `Projects.md`. `Current State.md` and `Sessions/` are yours.
 
@@ -84,7 +84,7 @@ Refreshes installed skills from the canonical source (the public Memcrate repo) 
 Quick vault health check. Sketch:
 
 ```
-Vault: ~/vault (full shape)
+Vault: ~/reference_vault (full shape)
 Last /save: 2026-05-10 14:30 (auth-rewrite-part-1)
 Skills installed: claude-code
 Profile.md: 247 lines, last_updated 2026-04-22
