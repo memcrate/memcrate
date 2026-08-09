@@ -103,8 +103,22 @@ case "$TOOL" in
             '$load' > "$OUT" 2>&1
         ;;
     claude)
-        HOME="$SCRATCH" claude -p '/load' \
-            --permission-mode acceptEdits > "$OUT" 2>&1
+        # --bare is what makes an API key work at all: it reads ANTHROPIC_API_KEY
+        # and never touches OAuth or the keychain. The tradeoff is that slash
+        # commands do not register, so this exercises the skill's description
+        # (the agent deciding to use it) rather than an explicit /load. That is
+        # the harder half anyway; a human typing /load is the easy case.
+        # cd into the scratch home first. Claude Code fences file access to the
+        # working directory, so running from the repo leaves the seeded vault
+        # unreadable and the canary check fails for a harness reason rather than
+        # a skill one. This mirrors the codex branch's -C.
+        (
+            cd "$SCRATCH" &&
+                HOME="$SCRATCH" claude --bare \
+                    --add-dir "$SCRATCH" \
+                    -p 'Load my memcrate context and get me oriented.' \
+                    --permission-mode acceptEdits
+        ) > "$OUT" 2>&1
         ;;
 esac
 RC=$?
