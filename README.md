@@ -166,6 +166,10 @@ The two names are deliberately different: `reference-vault/` is the mold, `~/mem
 
 The leak check exists because this repo's reference vault and skills are generalized from a real private vault. It blocks a push when a private project name, hostname, or absolute home path reaches a tracked file. Terms are read from the maintainer's local vault at runtime and are never committed here, so the check is a silent no-op on CI and on any other contributor's machine.
 
+`scripts/live-test.sh` answers the one question the gate above cannot: does `/load` actually find and read a vault in a real agent session? It installs into a scratch home, plants a fact that exists only inside that vault, runs the agent headless, and fails unless that fact comes back in the answer. `scripts/live-test.sh` tests Codex (needs `OPENAI_API_KEY`); `scripts/live-test.sh claude` tests Claude Code (needs `ANTHROPIC_API_KEY`). Claude Desktop shares Claude Code's skills directory but can only be driven by hand.
+
+It is deliberately not in `verify.sh`, the pre-push hook, or push CI: it costs money, needs network, and an agent words its answer differently every run, so a bad day upstream should not block a push. Run it before tagging a release, or from the **Live agent test** workflow in GitHub Actions.
+
 ## License
 
 - Code (`skills/`, future CLI source, install scripts) - [MIT](LICENSE)

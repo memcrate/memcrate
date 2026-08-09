@@ -1,0 +1,44 @@
+name: Live agent test
+
+# Manual only. This one starts a real agent session, so it costs money, needs
+# network, and its answer is worded differently every run. Keeping it off push
+# and pull_request means an outside contributor never sees a red X they have no
+# API key to fix. Run it before tagging a release.
+on:
+  workflow_dispatch:
+    inputs:
+      tool:
+        description: Which tool to test
+        type: choice
+        default: codex
+        options: [codex, claude]
+
+permissions:
+  contents: read
+
+jobs:
+  live-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install Codex
+        if: inputs.tool == 'codex'
+        run: npm install -g @openai/codex
+
+      - name: Install Claude Code
+        if: inputs.tool == 'claude'
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Live test
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: ./scripts/live-test.sh ${{ inputs.tool }}
