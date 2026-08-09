@@ -15,6 +15,7 @@ The skills are *ergonomic surfaces*, not the system itself. The system is the ma
 - **Install:** `memcrate` writes the three skill folders, each embedded in the CLI binary at compile time (so it works offline).
 - **Invocation:** Type `/save`, `/pin`, `/load` in Claude Code.
 - **Behavior:** Claude Code auto-discovers skills in `~/.claude/skills/` on session start.
+- **Desktop too:** Claude Desktop's local agent mode (Cowork) runs the same Claude Code binary against the same `~/.claude/skills/` directory, so one `memcrate` run covers both. See [Claude Desktop](#claude-desktop-cowork) below.
 
 ## Codex
 
@@ -22,7 +23,7 @@ The skills are *ergonomic surfaces*, not the system itself. The system is the ma
 - **Format:** identical to Claude Code. Codex reads the same `SKILL.md` shape, so Memcrate ships one canonical set of skills from `skills/agent/` and installs it to whichever tools you pick.
 - **Install:** `memcrate`, which installs for both tools at once.
 - **Invocation:** Type `$save`, `$pin`, `$load` in Codex. Codex invokes skills with `$`, not `/`.
-- **Note:** the vault-discovery step names the concrete call for each tool (Glob for Claude Code, `ls -d` for Codex), because an explicit tool call is followed more reliably than an abstract instruction.
+- **Note:** the vault-discovery step names a concrete call rather than an abstract goal, because an explicit tool call is followed more reliably. It branches on capability (Glob if the tool has it, `ls -d` otherwise) rather than on tool name, so an agent that doesn't recognize itself by name still picks the right call.
 
 ### Skill ownership
 
@@ -30,10 +31,17 @@ Installed skills get a `.memcrate-skill` marker file. Re-running `memcrate` repl
 
 ## Claude Desktop (Cowork)
 
-- **Location:** `~/.config/Claude/local-agent-mode-sessions/skills-plugin/<plugin-id>/<install-id>/skills/<verb>/SKILL.md`
-- **Install:** Via Claude Desktop UI. The skill is uploaded as a `.skill` zip archive (a zip of the SKILL.md folder) or shared as a `computer://` link to the SKILL.md file. Click "Save Skill" to commit.
-- **Caveat:** Claude Desktop keeps an internal cached copy of each registered skill. Direct edits to the on-disk SKILL.md don't take effect - Claude Desktop reads from its internal store. Vault updates require a manual re-register via the UI.
-- **CLI integration:** Memcrate would build the three `.skill` zips into a known directory and prints the next steps for UI install. The CLI can't programmatically register a skill in Claude Desktop without UI interaction, so its role is staging the zips, not installing them.
+- **Location:** `~/.claude/skills/<verb>/SKILL.md` - the same directory Claude Code uses.
+- **Install:** nothing extra. Claude Desktop's local agent mode runs the Claude Code binary with user-level settings enabled, so it reads `~/.claude/skills/` directly. The `memcrate` run that set up Claude Code already set up Cowork.
+- **Invocation:** Type `/save`, `/pin`, `/load`, same as Claude Code.
+
+### Skills synced from your Claude account
+
+Claude Desktop also shows skills you uploaded through the Claude web UI. Those are a **separate surface**: they live in your account, sync down into a session-scoped cache under `~/.config/Claude/local-agent-mode-sessions/skills-plugin/`, and that cache is regenerated from the server. Writing files into it does nothing.
+
+You only need this route if you want the verbs in Claude web sessions, which have no access to your local vault and so can't run them meaningfully. For local work, the filesystem install above is the whole story.
+
+There is no programmatic path to register an account-level skill. The `/v1/skills` endpoint on the Claude Developer Platform is org-scoped and API-key authenticated; it does not touch personal account skills. Uploading a `.skill` zip through the UI is the only way, which is why Memcrate doesn't try to automate it.
 
 ## Cursor
 
@@ -73,7 +81,7 @@ Memcrate's verb contracts are intended to generalize. As long as a tool can:
 2. Write files at known vault paths
 3. Be told to do those operations on user trigger
 
-…it can support the verbs. The implementation is whatever the tool's skill/rule/config format allows. Reference integrations ship for Claude Code, Claude Desktop, Cursor, and Aider; others are open to community contributions.
+…it can support the verbs. The implementation is whatever the tool's skill/rule/config format allows. Reference integrations ship today for Claude Code, Claude Desktop, and Codex; Cursor and Aider are designed but not built. Others are open to community contributions.
 
 ## Skill source of truth
 

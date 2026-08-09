@@ -22,7 +22,7 @@ const SKILL_MARKER: &str = ".memcrate-skill";
     name = "memcrate",
     version,
     about = "Set up a markdown context vault your AI tools can read.",
-    long_about = "Memcrate creates a portable, local-first markdown vault and installs the /load, /save, and /pin skills for Claude Code and Codex. Run it with no arguments for the guided setup."
+    long_about = "Memcrate creates a portable, local-first markdown vault and installs the /load, /save, and /pin skills for Claude Code, Claude Desktop, and Codex. Run it with no arguments for the guided setup."
 )]
 struct Cli {
     #[command(subcommand)]
@@ -56,7 +56,8 @@ enum Commands {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, ValueEnum)]
 enum Tool {
-    /// Claude Code (Anthropic's CLI). Installs to ~/.claude/skills/.
+    /// Claude Code (Anthropic's CLI). Installs to ~/.claude/skills/, which
+    /// Claude Desktop's local agent mode also reads, so this covers both.
     ClaudeCode,
     /// Codex (OpenAI's CLI). Installs to ~/.codex/skills/.
     Codex,
@@ -100,7 +101,7 @@ fn run(cli: Cli) -> Result<()> {
 
     if ask {
         println!("Memcrate creates a markdown vault your AI tools can read, then installs");
-        println!("the /load, /save, and /pin skills for Claude Code and Codex.");
+        println!("the /load, /save, and /pin skills for Claude Code, Claude Desktop, and Codex.");
         println!("Press Enter to accept a default, or Ctrl-C to stop.");
         println!();
     }
@@ -164,7 +165,7 @@ fn run(cli: Cli) -> Result<()> {
     println!("  pin    promote a fact into your permanent context files.");
     println!("  save   write a session log before you finish.");
     println!();
-    println!("Type them as /load in Claude Code, $load in Codex.");
+    println!("Type them as /load in Claude Code and Claude Desktop, $load in Codex.");
     println!();
     println!("Optional: `memcrate profile` answers a few questions about you so");
     println!("your first load has something to read.");
@@ -290,7 +291,7 @@ fn find_vault(path: Option<PathBuf>) -> Result<PathBuf> {
 
 fn tool_list(installed: usize) -> &'static str {
     match installed {
-        2 => "Claude Code and Codex",
+        2 => "Claude Code, Claude Desktop, and Codex",
         1 => "your tool",
         _ => "no tools",
     }

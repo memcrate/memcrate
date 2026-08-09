@@ -43,7 +43,7 @@ Memcrate is a personal context OS, not a memory tool. Your project catalog, dail
 memcrate/
 ├── reference-vault/    # Starter vault scaffold (Core/ + .memcrate marker) - copy anywhere
 ├── skills/             # Canonical SKILL.md files for each AI tool
-│   └── agent/          # /save, /load, /pin as SKILL.md (Claude Code + Codex)
+│   └── agent/          # /save, /load, /pin as SKILL.md (Claude Code, Claude Desktop, Codex)
 └── docs/               # Format spec: overview, verbs, vault structure, skills, CLI
 ```
 
@@ -62,13 +62,15 @@ Created your vault at ~/memcrate-vault.
 Installed 3 skills for Claude Code to ~/.claude/skills
 Installed 3 skills for Codex to ~/.codex/skills
 
-You now have three verbs in Claude Code and Codex:
+You now have three verbs in Claude Code, Claude Desktop, and Codex:
   load   read your vault and get oriented. Run this first.
   pin    promote a fact into your permanent context files.
   save   write a session log before you finish.
 
-Type them as /load in Claude Code, $load in Codex.
+Type them as /load in Claude Code and Claude Desktop, $load in Codex.
 ```
+
+Claude Desktop needs no separate step. Its local agent mode reads the same `~/.claude/skills/` directory Claude Code does.
 
 Re-running is safe. It reuses an existing vault and refreshes the skills.
 

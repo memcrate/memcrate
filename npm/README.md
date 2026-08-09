@@ -14,7 +14,7 @@ This package is a thin wrapper. On install it downloads the `memcrate` binary fo
 memcrate                 # asks where your vault goes, then sets everything up
 ```
 
-It creates the vault and installs the /load, /save, and /pin skills for Claude Code and Codex. Then start your tool and run `/load`.
+It creates the vault and installs the /load, /save, and /pin skills for Claude Code, Claude Desktop, and Codex. Then start your tool and run `/load`.
 
 ## What it is
 

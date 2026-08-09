@@ -21,7 +21,7 @@ Running it:
 
 1. Asks where the vault should live, defaulting to `~/memcrate-vault`. An existing Memcrate vault at that path is reused; a path with other content in it makes it ask again.
 2. Creates the vault: `Core/Context/{Profile,Projects,Current State}.md`, `Core/Sessions/`, and a `.memcrate` marker so tools can find it from any subdirectory.
-3. Installs the `/load`, `/save`, and `/pin` skills into `~/.claude/skills/` and `~/.codex/skills/`. Claude Code and Codex read the same `SKILL.md` format, so one canonical set of skills serves both.
+3. Installs the `/load`, `/save`, and `/pin` skills into `~/.claude/skills/` and `~/.codex/skills/`. Claude Code and Codex read the same `SKILL.md` format, so one canonical set of skills serves both. Claude Desktop's local agent mode reads `~/.claude/skills/` too, so it is covered by the same install with nothing extra to run.
 
 That is the whole setup, and it is idempotent.
 

@@ -60,8 +60,8 @@ Try in order:
 1. **Read `~/memcrate-vault/Core/Context/Profile.md`** - the default install location. If it returns content, `<vault>` = `~/memcrate-vault`.
 2. **Read `<cwd>/Core/Context/Profile.md`** - handles users who `cd`'d into their vault before launching the tool. Use the absolute working-directory path from your session context.
 3. **Depth-1 scan of the home directory** for `*/Core/Context/Profile.md`, which finds vaults at custom paths like `~/myvault`. Resolve `<home>` from your session context (typically `/home/<user>` on Linux, `/Users/<user>` on macOS, `C:\Users\<user>` on Windows).
-    - **Claude Code:** Glob with `path: <home>` and `pattern: "*/Core/Context/Profile.md"`.
-    - **Codex:** run `ls -d <home>/*/Core/Context/Profile.md 2>/dev/null`.
+    - **If you have a Glob tool** (Claude Code, Claude Desktop): Glob with `path: <home>` and `pattern: "*/Core/Context/Profile.md"`.
+    - **Otherwise** (Codex, or any shell-only tool): run `ls -d <home>/*/Core/Context/Profile.md 2>/dev/null`.
     - **One match** → `<vault>` is the first path segment of that match (strip `/Core/Context/Profile.md`).
     - **Multiple matches** → list them and ask the user which to use.
 
