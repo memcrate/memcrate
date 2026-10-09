@@ -162,7 +162,7 @@ The two names are deliberately different: `reference-vault/` is the mold, `~/mem
 
 ## Development
 
-`sh scripts/verify.sh` is the quality gate: leak check, fmt check, clippy (warnings deny), tests, build. The same script runs as a pre-push hook (wire it once per clone with `git config core.hooksPath .githooks`) and in CI on every push and pull request. CI also runs the tests on Windows and macOS.
+`sh scripts/verify.sh` is the quality gate: leak check, fmt check, clippy (warnings deny), tests, build. The same script runs as a pre-push hook (wire it once per clone with `git config core.hooksPath .githooks`) and in CI on every push and pull request. CI also runs the tests on Windows and macOS. `tests/cli.rs` runs the built binary in scratch homes, and fails if the sample output under Getting started (after the prompt) stops matching what `memcrate` actually prints.
 
 `scripts/smoke-install.sh` and `scripts/smoke-install.ps1` run the real installers from your checkout against the latest published release, inside a scratch directory, then run setup and check the vault and skills it wrote. The **Installers** workflow runs them on Linux, macOS, and Windows (PowerShell 5.1 and 7) whenever an installer changes and after every release.
 
