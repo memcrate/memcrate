@@ -137,7 +137,7 @@ The skills find your vault by reading `~/memcrate-vault/Core/Context/Profile.md`
 
 ### Skills you already own
 
-Memcrate never replaces a skill it did not install. If you already have your own `load`, `save`, or `pin`, it sets up everything else and tells you which one it skipped.
+Memcrate never replaces a skill it did not install. If you already have your own `load`, `save`, or `pin`, it leaves yours alone and installs its verbs in that tool as `memcrate-load`, `memcrate-pin`, and `memcrate-save`, then tells you what to type (`/memcrate-load` instead of `/load`). The choice is made per tool, so a conflict in Claude Code does not rename the verbs in Codex.
 
 ## Advanced install options
 

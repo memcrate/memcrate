@@ -140,12 +140,12 @@ fn run(cli: Cli) -> Result<()> {
     println!();
 
     // One tool failing should not cost the user the other one.
-    let mut installed = 0;
+    let mut installed: Vec<(Tool, SkillSet)> = Vec::new();
     let mut problems: Vec<String> = Vec::new();
     for tool in Tool::All.expand() {
         let dest = tool.skills_dir()?;
         match install_skills(tool, &dest, true) {
-            Ok(()) => installed += 1,
+            Ok(set) => installed.push((tool, set)),
             Err(e) => problems.push(format!("{}: {}", tool.label(), first_line(&e.to_string()))),
         }
     }
@@ -160,13 +160,18 @@ fn run(cli: Cli) -> Result<()> {
     }
 
     println!();
-    println!("You now have three verbs in {}:", tool_list(installed));
-    println!("  load   read your vault and get oriented. Run this first.");
-    println!("  pin    promote a fact into your permanent context files.");
-    println!("  save   write a session log before you finish.");
-    println!();
-    println!("Type them as /load in Claude Code and Claude Desktop, $load in Codex.");
-    println!();
+    if let Some(hint) = type_hint(&installed) {
+        println!(
+            "You now have three verbs in {}:",
+            tool_list(installed.len())
+        );
+        println!("  load   read your vault and get oriented. Run this first.");
+        println!("  pin    promote a fact into your permanent context files.");
+        println!("  save   write a session log before you finish.");
+        println!();
+        println!("{}", hint);
+        println!();
+    }
     println!("Optional: `memcrate profile` answers a few questions about you so");
     println!("your first load has something to read.");
     println!();
@@ -289,6 +294,29 @@ fn find_vault(path: Option<PathBuf>) -> Result<PathBuf> {
     bail!("No vault found. Run `memcrate` to create one, or pass the path:\n  memcrate profile <path>")
 }
 
+fn type_hint(installed: &[(Tool, SkillSet)]) -> Option<String> {
+    let parts: Vec<String> = installed
+        .iter()
+        .map(|(tool, set)| match tool {
+            Tool::Codex => format!("${} in Codex", set.name("load")),
+            _ => format!("/{} in Claude Code and Claude Desktop", set.name("load")),
+        })
+        .collect();
+    if parts.is_empty() {
+        return None;
+    }
+    Some(format!("Type them as {}.", parts.join(", ")))
+}
+
+fn and_list(items: &[String]) -> String {
+    match items {
+        [] => String::new(),
+        [one] => one.clone(),
+        [a, b] => format!("{} and {}", a, b),
+        [rest @ .., last] => format!("{}, and {}", rest.join(", "), last),
+    }
+}
+
 fn tool_list(installed: usize) -> &'static str {
     match installed {
         2 => "Claude Code, Claude Desktop, and Codex",
@@ -397,14 +425,115 @@ fn ensure_writable(target: &Path, force: bool) -> Result<()> {
 }
 
 fn skill_names() -> Vec<String> {
-    AGENT_SKILLS
+    let mut names: Vec<String> = AGENT_SKILLS
         .dirs()
         .filter_map(|d| {
             d.path()
                 .file_name()
                 .map(|n| n.to_string_lossy().into_owned())
         })
-        .collect()
+        .collect();
+    names.sort();
+    names
+}
+
+const SKILL_PREFIX: &str = "memcrate-";
+
+/// Which names a tool's skills went in under.
+#[derive(Debug, PartialEq, Eq)]
+enum SkillSet {
+    Plain,
+    /// The user owns skills with these plain names, so ours carry SKILL_PREFIX.
+    Prefixed(Vec<String>),
+}
+
+impl SkillSet {
+    fn name(&self, verb: &str) -> String {
+        match self {
+            SkillSet::Plain => verb.to_string(),
+            SkillSet::Prefixed(_) => format!("{}{}", SKILL_PREFIX, verb),
+        }
+    }
+}
+
+fn blocks_before(c: char) -> bool {
+    c.is_alphanumeric() || matches!(c, '.' | '~' | '/' | '_' | '-')
+}
+
+fn blocks_after(c: char) -> bool {
+    c.is_alphanumeric() || matches!(c, '-' | '_' | '/')
+}
+
+/// Point `/load`, `$save` and friends at the prefixed names, leaving paths and words alone.
+fn prefix_commands(text: &str) -> String {
+    let verbs = skill_names();
+    let mut out = String::with_capacity(text.len() + 64);
+    let mut prev: Option<char> = None;
+    let mut rest = text;
+    while let Some(c) = rest.chars().next() {
+        if matches!(c, '/' | '$') && !matches!(prev, Some(p) if blocks_before(p)) {
+            let verb = verbs.iter().find(|v| {
+                rest[1..].starts_with(v.as_str())
+                    && !matches!(rest[1 + v.len()..].chars().next(), Some(n) if blocks_after(n))
+            });
+            if let Some(verb) = verb {
+                out.push(c);
+                out.push_str(SKILL_PREFIX);
+                out.push_str(verb);
+                rest = &rest[1 + verb.len()..];
+                prev = verb.chars().last();
+                continue;
+            }
+        }
+        out.push(c);
+        rest = &rest[c.len_utf8()..];
+        prev = Some(c);
+    }
+    out
+}
+
+fn prefix_skill_md(text: &str) -> String {
+    let verbs = skill_names();
+    let mut out = String::with_capacity(text.len() + 64);
+    let mut fences = 0;
+    for (i, line) in text.split_inclusive('\n').enumerate() {
+        let body = line.trim_end_matches(['\n', '\r']);
+        if body == "---" && (i == 0 || fences == 1) {
+            fences += 1;
+        } else if fences == 1 {
+            let name = body.strip_prefix("name:").map(str::trim);
+            if let Some(verb) = name.filter(|n| verbs.iter().any(|v| v == n)) {
+                out.push_str(&format!("name: {}{}", SKILL_PREFIX, verb));
+                out.push_str(&line[body.len()..]);
+                continue;
+            }
+        }
+        out.push_str(line);
+    }
+    prefix_commands(&out)
+}
+
+fn write_skill(dir: &Dir, root: &Path, target: &Path, prefixed: bool) -> Result<()> {
+    fs::create_dir_all(target).with_context(|| format!("Failed to create {}", target.display()))?;
+    for sub in dir.dirs() {
+        write_skill(sub, root, target, prefixed)?;
+    }
+    for file in dir.files() {
+        let rel = file.path().strip_prefix(root).unwrap_or(file.path());
+        let out = target.join(rel);
+        if let Some(parent) = out.parent() {
+            fs::create_dir_all(parent)
+                .with_context(|| format!("Failed to create {}", parent.display()))?;
+        }
+        let contents = match file.contents_utf8() {
+            Some(text) if prefixed && rel == Path::new("SKILL.md") => {
+                prefix_skill_md(text).into_bytes()
+            }
+            _ => file.contents().to_vec(),
+        };
+        fs::write(&out, contents).with_context(|| format!("Failed to write {}", out.display()))?;
+    }
+    Ok(())
 }
 
 /// A skill folder belongs to Memcrate if we marked it, or (for installs from
@@ -418,29 +547,46 @@ fn is_memcrate_skill(dir: &Path) -> bool {
         .unwrap_or(false)
 }
 
-fn install_skills(tool: Tool, dest: &Path, force: bool) -> Result<()> {
+fn owns_skill(dest: &Path, name: &str) -> bool {
+    // Pre-marker installs only ever used the plain names, so prefixed ones need the marker.
+    if name.starts_with(SKILL_PREFIX) {
+        return dest.join(name).join(SKILL_MARKER).exists();
+    }
+    is_memcrate_skill(&dest.join(name))
+}
+
+fn install_skills(tool: Tool, dest: &Path, force: bool) -> Result<SkillSet> {
     fs::create_dir_all(dest).with_context(|| format!("Failed to create {}", dest.display()))?;
 
-    let names = skill_names();
+    let verbs = skill_names();
+    let foreign = |n: &String| dest.join(n).exists() && !owns_skill(dest, n);
+    let conflicts: Vec<String> = verbs.iter().filter(|n| foreign(n)).cloned().collect();
+    let (set, other) = if conflicts.is_empty() {
+        (SkillSet::Plain, SkillSet::Prefixed(Vec::new()))
+    } else {
+        (SkillSet::Prefixed(conflicts.clone()), SkillSet::Plain)
+    };
+    let names: Vec<String> = verbs.iter().map(|v| set.name(v)).collect();
+
     let existing: Vec<String> = names
         .iter()
         .filter(|n| dest.join(n).exists())
         .cloned()
         .collect();
 
-    let (ours, theirs): (Vec<String>, Vec<String>) = existing
-        .iter()
-        .cloned()
-        .partition(|n| is_memcrate_skill(&dest.join(n)));
+    let (ours, theirs): (Vec<String>, Vec<String>) =
+        existing.iter().cloned().partition(|n| owns_skill(dest, n));
 
     // Never delete a skill someone else wrote, whatever flags we were given.
     if !theirs.is_empty() {
+        let mut blocking = conflicts.clone();
+        blocking.extend(theirs);
         bail!(
             "{} already has skill(s) Memcrate did not install: {}.\n\n\
              Memcrate will not overwrite skills it does not own, even with --force.\n\
              Move or rename them first.",
             dest.display(),
-            theirs.join(", ")
+            blocking.join(", ")
         );
     }
 
@@ -458,17 +604,33 @@ fn install_skills(tool: Tool, dest: &Path, force: bool) -> Result<()> {
             .with_context(|| format!("Failed to remove existing {}", p.display()))?;
     }
 
-    AGENT_SKILLS
-        .extract(dest)
-        .with_context(|| format!("Failed to extract skills to {}", dest.display()))?;
-
-    for name in &names {
-        let marker = dest.join(name).join(SKILL_MARKER);
+    let prefixed = matches!(set, SkillSet::Prefixed(_));
+    for skill in AGENT_SKILLS.dirs() {
+        let verb = skill
+            .path()
+            .file_name()
+            .unwrap_or_default()
+            .to_string_lossy();
+        let target = dest.join(set.name(&verb));
+        fs::create_dir_all(&target)
+            .with_context(|| format!("Failed to create {}", target.display()))?;
+        // Marker first, so a write that fails halfway still leaves a folder we own.
+        let marker = target.join(SKILL_MARKER);
         fs::write(
             &marker,
             "Installed by Memcrate. Safe for memcrate to replace.\n",
         )
         .with_context(|| format!("Failed to write {}", marker.display()))?;
+        write_skill(skill, skill.path(), &target, prefixed)?;
+    }
+
+    // Marker only here: a user's own plain skill may mention memcrate.
+    for verb in &verbs {
+        let p = dest.join(other.name(verb));
+        if p.join(SKILL_MARKER).exists() {
+            fs::remove_dir_all(&p)
+                .with_context(|| format!("Failed to remove old {}", p.display()))?;
+        }
     }
 
     println!(
@@ -477,7 +639,20 @@ fn install_skills(tool: Tool, dest: &Path, force: bool) -> Result<()> {
         tool.label(),
         dest.display()
     );
-    Ok(())
+    if !conflicts.is_empty() {
+        println!("{}", prefixed_notice(tool, &conflicts, &names));
+    }
+    Ok(set)
+}
+
+fn prefixed_notice(tool: Tool, conflicts: &[String], names: &[String]) -> String {
+    format!(
+        "You already have your own {} skill{} for {}, so Memcrate installed its verbs there as {}.",
+        and_list(conflicts),
+        if conflicts.len() == 1 { "" } else { "s" },
+        tool.label(),
+        and_list(names)
+    )
 }
 
 const IDENTITY_PLACEHOLDER: &str = "<!-- Who you are professionally. One paragraph. -->";
@@ -860,6 +1035,272 @@ mod tests {
         let mut names = skill_names();
         names.sort();
         assert_eq!(names, vec!["load", "pin", "save"]);
+    }
+
+    fn bundled(verb: &str) -> String {
+        AGENT_SKILLS
+            .get_file(format!("{}/SKILL.md", verb))
+            .and_then(|f| f.contents_utf8())
+            .unwrap()
+            .to_string()
+    }
+
+    fn own_skill(dest: &Path, name: &str) -> String {
+        // Mentioning "memcrate" here would make it look like a pre-marker install of ours.
+        let text = "---\nname: mine\n---\nA skill I wrote myself.\n".to_string();
+        fs::create_dir_all(dest.join(name)).unwrap();
+        fs::write(dest.join(name).join("SKILL.md"), &text).unwrap();
+        text
+    }
+
+    fn owned_skill(dest: &Path, name: &str) {
+        fs::create_dir_all(dest.join(name)).unwrap();
+        fs::write(dest.join(name).join("SKILL.md"), "old").unwrap();
+        fs::write(dest.join(name).join(SKILL_MARKER), "").unwrap();
+    }
+
+    fn snapshot(dir: &Path) -> Vec<(PathBuf, Vec<u8>)> {
+        let mut out = Vec::new();
+        for entry in fs::read_dir(dir).unwrap().flatten() {
+            let p = entry.path();
+            if p.is_dir() {
+                out.push((p.clone(), Vec::new()));
+                out.extend(snapshot(&p));
+            } else {
+                out.push((p.clone(), fs::read(&p).unwrap()));
+            }
+        }
+        out.sort();
+        out
+    }
+
+    #[test]
+    fn clean_dir_gets_the_plain_set() {
+        let dest = tmp("skills-clean");
+        assert_eq!(
+            install_skills(Tool::ClaudeCode, &dest, true).unwrap(),
+            SkillSet::Plain
+        );
+        for verb in ["load", "pin", "save"] {
+            let dir = dest.join(verb);
+            assert!(dir.join(SKILL_MARKER).exists());
+            assert_eq!(
+                fs::read_to_string(dir.join("SKILL.md")).unwrap(),
+                bundled(verb)
+            );
+            assert!(!dest.join(format!("memcrate-{}", verb)).exists());
+        }
+    }
+
+    #[test]
+    fn a_users_own_save_moves_memcrate_to_prefixed_names() {
+        let dest = tmp("skills-own-save");
+        let theirs = own_skill(&dest, "save");
+        assert_eq!(
+            install_skills(Tool::ClaudeCode, &dest, true).unwrap(),
+            SkillSet::Prefixed(vec!["save".to_string()])
+        );
+        assert_eq!(
+            fs::read_to_string(dest.join("save").join("SKILL.md")).unwrap(),
+            theirs
+        );
+        assert!(!dest.join("save").join(SKILL_MARKER).exists());
+        assert!(!dest.join("load").exists());
+        assert!(!dest.join("pin").exists());
+        for verb in ["load", "pin", "save"] {
+            let dir = dest.join(format!("memcrate-{}", verb));
+            assert!(dir.join(SKILL_MARKER).exists());
+            let text = fs::read_to_string(dir.join("SKILL.md")).unwrap();
+            // Windows checkouts embed the bundled skills with CRLF.
+            let name = format!("name: memcrate-{}", verb);
+            assert!(text.lines().any(|l| l == name));
+            for token in ["/load", "/pin", "/save", "$load", "$pin", "$save"] {
+                assert!(!text.contains(token), "{} still has {}", verb, token);
+            }
+        }
+        let save = fs::read_to_string(dest.join("memcrate-save").join("SKILL.md")).unwrap();
+        assert!(save.contains("`/memcrate-load`"));
+    }
+
+    #[test]
+    fn switching_to_prefixed_removes_memcrate_plain_skills() {
+        let dest = tmp("skills-to-prefixed");
+        owned_skill(&dest, "pin");
+        owned_skill(&dest, "save");
+        let theirs = own_skill(&dest, "load");
+        assert_eq!(
+            install_skills(Tool::Codex, &dest, true).unwrap(),
+            SkillSet::Prefixed(vec!["load".to_string()])
+        );
+        assert!(!dest.join("pin").exists());
+        assert!(!dest.join("save").exists());
+        assert_eq!(
+            fs::read_to_string(dest.join("load").join("SKILL.md")).unwrap(),
+            theirs
+        );
+        for verb in ["load", "pin", "save"] {
+            assert!(dest
+                .join(format!("memcrate-{}", verb))
+                .join(SKILL_MARKER)
+                .exists());
+        }
+    }
+
+    #[test]
+    fn an_unmarked_load_mentioning_memcrate_survives_a_switch_to_prefixed() {
+        let dest = tmp("skills-unmarked-load");
+        let theirs = own_skill(&dest, "save");
+        let load = "---\nname: load\n---\nRead my memcrate vault.\n";
+        fs::create_dir_all(dest.join("load")).unwrap();
+        fs::write(dest.join("load").join("SKILL.md"), load).unwrap();
+        assert_eq!(
+            install_skills(Tool::ClaudeCode, &dest, true).unwrap(),
+            SkillSet::Prefixed(vec!["save".to_string()])
+        );
+        assert_eq!(
+            fs::read_to_string(dest.join("load").join("SKILL.md")).unwrap(),
+            load
+        );
+        assert!(!dest.join("load").join(SKILL_MARKER).exists());
+        assert_eq!(
+            fs::read_to_string(dest.join("save").join("SKILL.md")).unwrap(),
+            theirs
+        );
+        for verb in ["load", "pin", "save"] {
+            assert!(dest
+                .join(format!("memcrate-{}", verb))
+                .join(SKILL_MARKER)
+                .exists());
+        }
+    }
+
+    #[test]
+    fn switching_back_to_plain_removes_memcrate_prefixed_skills() {
+        let dest = tmp("skills-to-plain");
+        for verb in ["load", "pin", "save"] {
+            owned_skill(&dest, &format!("memcrate-{}", verb));
+        }
+        assert_eq!(
+            install_skills(Tool::ClaudeCode, &dest, true).unwrap(),
+            SkillSet::Plain
+        );
+        for verb in ["load", "pin", "save"] {
+            assert!(dest.join(verb).join(SKILL_MARKER).exists());
+            assert!(!dest.join(format!("memcrate-{}", verb)).exists());
+        }
+    }
+
+    #[test]
+    fn a_foreign_skill_at_a_prefixed_name_blocks_the_install() {
+        let dest = tmp("skills-blocked");
+        own_skill(&dest, "save");
+        let theirs = dest.join("memcrate-load");
+        fs::create_dir_all(&theirs).unwrap();
+        fs::write(
+            theirs.join("SKILL.md"),
+            "---\nname: memcrate-load\n---\nMy own memcrate loader.\n",
+        )
+        .unwrap();
+        owned_skill(&dest, "pin");
+        owned_skill(&dest, "memcrate-pin");
+        let before = snapshot(&dest);
+        let err = install_skills(Tool::ClaudeCode, &dest, true)
+            .unwrap_err()
+            .to_string();
+        assert!(first_line(&err).contains("save, memcrate-load"));
+        assert_eq!(snapshot(&dest), before);
+    }
+
+    #[test]
+    fn prefix_rewrites_frontmatter_name_and_commands() {
+        let text = "---\nname: save\ndescription: runs /load or $load, or asks.\n---\n\
+                    - `/save <label>` - scope\n(same rule as `/load`)\n\
+                    `/pin` is the only verb\nRun `/load` in your next session.\n\"/pin\" alone\n";
+        let out = prefix_skill_md(text);
+        assert!(out.starts_with("---\nname: memcrate-save\n"));
+        assert!(out.contains("runs /memcrate-load or $memcrate-load, or asks."));
+        assert!(out.contains("`/memcrate-save <label>`"));
+        assert!(out.contains("(same rule as `/memcrate-load`)"));
+        assert!(out.contains("`/memcrate-pin` is the only verb"));
+        assert!(out.contains("Run `/memcrate-load` in your next session."));
+        assert!(out.contains("\"/memcrate-pin\" alone"));
+        assert_eq!(prefix_skill_md(&out), out);
+    }
+
+    #[test]
+    fn prefix_handles_crlf_frontmatter() {
+        let out = prefix_skill_md("---\r\nname: load\r\n---\r\nRun /save.\r\n");
+        assert_eq!(
+            out,
+            "---\r\nname: memcrate-load\r\n---\r\nRun /memcrate-save.\r\n"
+        );
+    }
+
+    #[test]
+    fn prefix_leaves_paths_and_plain_words_alone() {
+        for text in [
+            "Write to Core/Sessions/ and foo/save/ today.",
+            "a/load, x./pin, ~/save, _/pin, -/load, //save, a$load",
+            "/loads /load-x /load_y /save/ $pins",
+            "reload the page, pin this, save this session",
+            "name: load outside frontmatter",
+        ] {
+            assert_eq!(prefix_skill_md(text), text);
+        }
+        assert_eq!(
+            prefix_skill_md("---\ntitle: x\n---\nname: load\n"),
+            "---\ntitle: x\n---\nname: load\n"
+        );
+        assert_eq!(prefix_commands("/load"), "/memcrate-load");
+        assert_eq!(prefix_commands("($save)"), "($memcrate-save)");
+    }
+
+    #[test]
+    fn type_hint_matches_each_tools_outcome() {
+        let clean = vec![
+            (Tool::ClaudeCode, SkillSet::Plain),
+            (Tool::Codex, SkillSet::Plain),
+        ];
+        assert_eq!(
+            type_hint(&clean).unwrap(),
+            "Type them as /load in Claude Code and Claude Desktop, $load in Codex."
+        );
+        let mixed = vec![
+            (
+                Tool::ClaudeCode,
+                SkillSet::Prefixed(vec!["load".to_string()]),
+            ),
+            (Tool::Codex, SkillSet::Plain),
+        ];
+        assert_eq!(
+            type_hint(&mixed).unwrap(),
+            "Type them as /memcrate-load in Claude Code and Claude Desktop, $load in Codex."
+        );
+        let codex_only = vec![(Tool::Codex, SkillSet::Prefixed(vec!["save".to_string()]))];
+        assert_eq!(
+            type_hint(&codex_only).unwrap(),
+            "Type them as $memcrate-load in Codex."
+        );
+        assert_eq!(type_hint(&[]), None);
+    }
+
+    #[test]
+    fn prefixed_notice_names_the_users_skills() {
+        let names: Vec<String> = ["load", "pin", "save"]
+            .iter()
+            .map(|v| format!("memcrate-{}", v))
+            .collect();
+        assert_eq!(
+            prefixed_notice(Tool::ClaudeCode, &["load".to_string()], &names),
+            "You already have your own load skill for Claude Code, so Memcrate installed \
+             its verbs there as memcrate-load, memcrate-pin, and memcrate-save."
+        );
+        assert!(prefixed_notice(
+            Tool::Codex,
+            &["load".to_string(), "save".to_string()],
+            &names
+        )
+        .starts_with("You already have your own load and save skills for Codex,"));
     }
 
     #[test]

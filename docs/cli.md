@@ -43,7 +43,7 @@ The alternative to running it at all is editing `Profile.md` and `Projects.md` d
 
 ### Skill ownership
 
-Installed skills carry a `.memcrate-skill` marker. Memcrate only ever replaces skills carrying that marker, so a skill you wrote yourself named `load`, `save`, or `pin` is never deleted. When one is in the way, the run finishes everything else and reports the one it skipped, so a stray skill in one tool does not cost you the other.
+Installed skills carry a `.memcrate-skill` marker. A skill you wrote yourself named `load`, `save`, or `pin` is never deleted. The one exception is a plain-named skill with no marker whose SKILL.md mentions Memcrate: that is treated as an install from before v0.4.0 and refreshed when Memcrate installs under the plain names. When a skill of yours is in the way, Memcrate installs all three verbs in that tool as `memcrate-load`, `memcrate-pin`, and `memcrate-save` instead, rewritten to refer to each other by those names, and the summary tells you what to type. The choice is made per tool. A later run that finds the conflict gone, or a new one, switches sets and removes only old folders that carry the marker. If a `memcrate-` name is also taken by a skill Memcrate did not install, the run skips that tool and reports it, so a stray skill in one tool does not cost you the other.
 
 ## Planned commands
 
