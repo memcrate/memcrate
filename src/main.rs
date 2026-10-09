@@ -334,11 +334,14 @@ fn ask_vault_path(default: &Path) -> Result<PathBuf> {
 /// Shells expand `~` before we ever see it, but a typed answer keeps it literal.
 fn expand_home(input: &str) -> Result<PathBuf> {
     let trimmed = input.trim();
-    if trimmed == "~" {
-        return home_dir();
-    }
-    if let Some(rest) = trimmed.strip_prefix("~/") {
-        return Ok(home_dir()?.join(rest));
+    if let Some(rest) = trimmed.strip_prefix('~') {
+        if rest.is_empty() {
+            return home_dir();
+        }
+        // is_separator accepts `\` as well as `/` on Windows only.
+        if rest.starts_with(std::path::is_separator) {
+            return Ok(home_dir()?.join(&rest[1..]));
+        }
     }
     Ok(PathBuf::from(trimmed))
 }
@@ -435,7 +438,7 @@ fn install_skills(tool: Tool, dest: &Path, force: bool) -> Result<()> {
         bail!(
             "{} already has skill(s) Memcrate did not install: {}.\n\n\
              Memcrate will not overwrite skills it does not own, even with --force.\n\
-             Move or rename them first, or install elsewhere with --target <path>.",
+             Move or rename them first.",
             dest.display(),
             theirs.join(", ")
         );
@@ -785,6 +788,10 @@ mod tests {
         assert_eq!(expand_home("/tmp/x").unwrap(), PathBuf::from("/tmp/x"));
         // A leading "~" that is not a path separator is a real directory name.
         assert_eq!(expand_home("~notes").unwrap(), PathBuf::from("~notes"));
+        #[cfg(windows)]
+        assert_eq!(expand_home("~\\notes").unwrap(), home.join("notes"));
+        #[cfg(not(windows))]
+        assert_eq!(expand_home("~\\notes").unwrap(), PathBuf::from("~\\notes"));
     }
 
     #[test]

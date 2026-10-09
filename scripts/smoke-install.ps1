@@ -50,12 +50,27 @@ $savedProfile = $env:USERPROFILE
 $savedInstallDir = $env:MEMCRATE_INSTALL_DIR
 
 try {
+    # A %VAR% entry the installer must leave unexpanded.
+    $seed = '%SystemRoot%\memcrate-smoke-seed'
+    $seeded = if ($savedPathRaw) { "$($savedPathRaw.TrimEnd(';'));$seed" } else { $seed }
+    New-ItemProperty -Path 'HKCU:\Environment' -Name 'Path' -Value $seeded -PropertyType ExpandString -Force | Out-Null
+
     Write-Host "==> install.ps1 (PowerShell $($PSVersionTable.PSVersion))"
     $env:MEMCRATE_INSTALL_DIR = $binDir
     & { Get-Content -Raw (Join-Path $repo 'install.ps1') | Invoke-Expression }
 
     $exe = Join-Path $binDir 'memcrate.exe'
     if (-not (Test-Path $exe)) { Fail "no binary at $exe" }
+
+    $envKey = Get-Item 'HKCU:\Environment'
+    if ($envKey.GetValueKind('Path') -ne 'ExpandString') { Fail 'installer changed the user PATH registry type' }
+    $rawPath = $envKey.GetValue('Path', $null, 'DoNotExpandEnvironmentNames')
+    if ($rawPath -notlike "*$seed*") { Fail 'installer expanded %VAR% entries in the user PATH' }
+
+    Write-Host '==> install.ps1 again (must leave the user PATH alone)'
+    & { Get-Content -Raw (Join-Path $repo 'install.ps1') | Invoke-Expression }
+    $rawAgain = (Get-Item 'HKCU:\Environment').GetValue('Path', $null, 'DoNotExpandEnvironmentNames')
+    if ($rawAgain -cne $rawPath) { Fail 'second install changed the user PATH' }
 
     $userPath = [Environment]::GetEnvironmentVariable('Path', 'User')
     if (-not (($userPath -split ';') -contains $binDir)) { Fail 'install dir was not added to the user PATH' }
