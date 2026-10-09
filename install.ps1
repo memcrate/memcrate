@@ -30,11 +30,18 @@ function Resolve-InstallDir {
     return (Join-Path $env:LOCALAPPDATA 'Programs\memcrate')
 }
 
+# Round-tripping Path through [Environment] expands %VAR% entries and rewrites
+# REG_EXPAND_SZ as REG_SZ, so this edits the raw registry value instead.
 function Add-ToUserPath($Dir) {
-    $userPath = [Environment]::GetEnvironmentVariable('Path', 'User')
-    if ($userPath -and ($userPath.Split(';') -contains $Dir)) { return $false }
-    $newPath = if ($userPath) { "$userPath;$Dir" } else { $Dir }
-    [Environment]::SetEnvironmentVariable('Path', $newPath, 'User')
+    $key = Get-Item 'HKCU:\Environment'
+    $userPath = $key.GetValue('Path', '', 'DoNotExpandEnvironmentNames')
+    $entries = $userPath.Split(';') | ForEach-Object { [Environment]::ExpandEnvironmentVariables($_).TrimEnd('\') }
+    if ($entries -contains $Dir.TrimEnd('\')) { return $false }
+    $kind = if ($key.GetValueNames() -contains 'Path') { $key.GetValueKind('Path') } else { 'ExpandString' }
+    $newPath = if ($userPath) { "$($userPath.TrimEnd(';'));$Dir" } else { $Dir }
+    New-ItemProperty -Path 'HKCU:\Environment' -Name 'Path' -Value $newPath -PropertyType $kind -Force | Out-Null
+    # Setting any user variable broadcasts WM_SETTINGCHANGE, so new terminals see the new Path.
+    [Environment]::SetEnvironmentVariable('MEMCRATE_PATH_REFRESH', $null, 'User')
     return $true
 }
 
@@ -103,7 +110,7 @@ try {
     # Also update the current session so `memcrate` works without opening a new terminal.
     if (-not ($env:Path.Split(';') -contains $installDir)) {
         $env:Path = "$installDir;$env:Path"
-        Write-Info "Updated PATH for this session - you can run `memcrate` right now."
+        Write-Info "Updated PATH for this session - you can run 'memcrate' right now."
     }
 
     Write-Info ""
