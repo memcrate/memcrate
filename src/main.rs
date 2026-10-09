@@ -1111,7 +1111,9 @@ mod tests {
             let dir = dest.join(format!("memcrate-{}", verb));
             assert!(dir.join(SKILL_MARKER).exists());
             let text = fs::read_to_string(dir.join("SKILL.md")).unwrap();
-            assert!(text.contains(&format!("\nname: memcrate-{}\n", verb)));
+            // Windows checkouts embed the bundled skills with CRLF.
+            let name = format!("name: memcrate-{}", verb);
+            assert!(text.lines().any(|l| l == name));
             for token in ["/load", "/pin", "/save", "$load", "$pin", "$save"] {
                 assert!(!text.contains(token), "{} still has {}", verb, token);
             }
