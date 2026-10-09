@@ -162,7 +162,9 @@ The two names are deliberately different: `reference-vault/` is the mold, `~/mem
 
 ## Development
 
-`sh scripts/verify.sh` is the quality gate: leak check, fmt check, clippy (warnings deny), tests, build. The same script runs as a pre-push hook (wire it once per clone with `git config core.hooksPath .githooks`) and in CI on every push and pull request.
+`sh scripts/verify.sh` is the quality gate: leak check, fmt check, clippy (warnings deny), tests, build. The same script runs as a pre-push hook (wire it once per clone with `git config core.hooksPath .githooks`) and in CI on every push and pull request. CI also runs the tests on Windows and macOS.
+
+`scripts/smoke-install.sh` and `scripts/smoke-install.ps1` run the real installers from your checkout against the latest published release, inside a scratch directory, then run setup and check the vault and skills it wrote. The **Installers** workflow runs them on Linux, macOS, and Windows (PowerShell 5.1 and 7) whenever an installer changes and after every release.
 
 The leak check exists because this repo's reference vault and skills are generalized from a real private vault. It blocks a push when a private project name, hostname, or absolute home path reaches a tracked file. Terms are read from the maintainer's local vault at runtime and are never committed here, so the check is a silent no-op on CI and on any other contributor's machine.
 

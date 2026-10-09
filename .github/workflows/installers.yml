@@ -1,0 +1,60 @@
+name: Installers
+
+on:
+  push:
+    branches: ['**']
+    paths:
+      - install.sh
+      - install.ps1
+      - scripts/smoke-install.sh
+      - scripts/smoke-install.ps1
+      - .github/workflows/installers.yml
+  pull_request:
+    paths:
+      - install.sh
+      - install.ps1
+      - scripts/smoke-install.sh
+      - scripts/smoke-install.ps1
+      - .github/workflows/installers.yml
+  # Checks that the assets a release just published install on every platform.
+  workflow_run:
+    workflows: [Release]
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  unix:
+    name: install.sh (${{ matrix.os }})
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Smoke test
+        run: sh scripts/smoke-install.sh
+
+  windows:
+    name: install.ps1 (${{ matrix.shell }})
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    strategy:
+      fail-fast: false
+      matrix:
+        # powershell is Windows PowerShell 5.1, what `irm | iex` runs under by default.
+        shell: [powershell, pwsh]
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Smoke test
+        run: ${{ matrix.shell }} -NoProfile -ExecutionPolicy Bypass -File scripts/smoke-install.ps1
