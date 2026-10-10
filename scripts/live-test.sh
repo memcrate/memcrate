@@ -88,7 +88,13 @@ echo "==> building memcrate"
 # A scratch HOME keeps the test off your real skills and vault. Codex stores
 # its key there, so it is removed on every exit path.
 # Agent output sits beside the scratch home, so a later session cannot read it.
-WORK="$(mktemp -d)"
+# On Windows, Git Bash shows %TEMP% as /tmp, which Claude Code does not map back to a
+# Windows path; a folder under the user profile appears as /c/Users/..., like a real home.
+if [ "$WINDOWS" = 1 ]; then
+    WORK="$(mktemp -d "$(cygpath -u "$USERPROFILE")/memcrate-live.XXXXXX")"
+else
+    WORK="$(mktemp -d)"
+fi
 cleanup() { rm -rf "$WORK"; }
 trap cleanup EXIT
 trap 'exit 130' INT TERM
