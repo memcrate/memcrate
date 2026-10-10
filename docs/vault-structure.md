@@ -54,12 +54,14 @@ Both are the same vault. The optional folders are just there or not. You can add
 
 ## Vault layout discovery
 
-Skills locate the vault by attempting to read `Core/Context/Profile.md` from two candidates, in order:
+Skills locate the vault by attempting to read `Core/Context/Profile.md` from these candidates, in order, moving on whenever a read misses or is blocked:
 
-1. **`~/memcrate-vault/`** - Memcrate's default install path. Choose another with `memcrate --vault <path>`.
+1. **The path recorded at install** - `memcrate` writes the vault's absolute path into each installed skill. Skills copied by hand still show a placeholder and skip this step.
 2. **The current working directory** - handles users who `cd`'d into a non-default vault before launching their tool.
+3. **`<home>/memcrate-vault/`** - Memcrate's default install path, with `<home>` taken from the environment (`$HOME`, or `USERPROFILE` on Windows), never guessed. Choose another vault path with `memcrate --vault <path>`.
+4. **A depth-1 scan of the home directory** for `*/Core/Context/Profile.md`.
 
-If both reads miss, the skill asks the user in plain English where their vault is, then reads from the answer. Per-tool implementations should use a file-read primitive (not shell expansion) for these checks so permission prompts stay legible.
+If every candidate misses, the skill asks the user in plain English where their vault is, then reads from the answer. Per-tool implementations should use a file-read primitive (not shell expansion) for these checks so permission prompts stay legible.
 
 Inside the located vault, canonical files always live at:
 

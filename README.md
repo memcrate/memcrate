@@ -133,7 +133,7 @@ slash (`/load`); Codex uses a leading dollar sign (`$load`). The three verbs:
 - **`/pin <insight>`** promotes a fact into `Profile.md`, `Projects.md`, or `Current State.md` so it survives across sessions.
 - **`/save`** writes a session log to `Core/Sessions/` so the next `/load` picks up where you left off.
 
-The skills find your vault by reading `~/memcrate-vault/Core/Context/Profile.md`, then the current directory, then a depth-1 scan of your home directory. If nothing matches, `/load` asks you where it is.
+Setup writes your vault's full path into the installed skills, so they read it from there first. If that misses, they try the current directory, then `~/memcrate-vault`, then a depth-1 scan of your home directory. If nothing matches, `/load` asks you where it is.
 
 ### Skills you already own
 
@@ -168,9 +168,9 @@ The two names are deliberately different: `reference-vault/` is the mold, `~/mem
 
 The leak check exists because this repo's reference vault and skills are generalized from a real private vault. It blocks a push when a private project name, hostname, or absolute home path reaches a tracked file. Terms are read from the maintainer's local vault at runtime and are never committed here, so the check is a silent no-op on CI and on any other contributor's machine.
 
-`scripts/live-test.sh` answers the one question the gate above cannot: does `/load` actually find and read a vault in a real agent session? It installs into a scratch home, plants a fact that exists only inside that vault, runs the agent headless, and fails unless that fact comes back in the answer. `scripts/live-test.sh` tests Codex (needs `OPENAI_API_KEY`); `scripts/live-test.sh claude` tests Claude Code (needs `ANTHROPIC_API_KEY`). Claude Desktop shares Claude Code's skills directory but can only be driven by hand.
+`scripts/live-test.sh` answers the one question the gate above cannot: do the skills actually work in a real agent session? It installs into a scratch home, then runs headless sessions against one vault. Each step must show that the installed skill ran (Claude Code is driven with `/load`, `/save`, and `/pin`, because its `--bare` API-key mode has no automatic skill tool), and is then checked by what lands on disk, not by wording. `load` must answer with a fact that exists only inside the vault. `save` must write exactly one new session log with `type: session` frontmatter and a fact from the prompt. `pin` must put a fact from the prompt into a context file and bump its `last_updated`. The run also fails if anything outside the vault appears or disappears, apart from the agent's own state. `scripts/live-test.sh codex` tests Codex (needs `OPENAI_API_KEY`); `scripts/live-test.sh claude` tests Claude Code (needs `ANTHROPIC_API_KEY`, and `LIVE_TEST_CLAUDE_MODEL` picks a model). Add `prefixed` to plant your own `save` skill first, check that Memcrate fell back to `memcrate-load`, `memcrate-pin`, and `memcrate-save`, and load by the prefixed name. Claude Desktop shares Claude Code's skills directory but can only be driven by hand.
 
-It is deliberately not in `verify.sh`, the pre-push hook, or push CI: it costs money, needs network, and an agent words its answer differently every run, so a bad day upstream should not block a push. Run it before tagging a release, or from the **Live agent test** workflow in GitHub Actions.
+It is deliberately not in `verify.sh`, the pre-push hook, or push CI: it costs money, needs network, and an agent words its answer differently every run, so a bad day upstream should not block a push. Run it locally before tagging a release, or from the **Live agent test** workflow in GitHub Actions, which runs the plain test on Linux, macOS, and Windows and the prefixed test on Linux, for Claude Code, Codex, or both.
 
 ## License
 

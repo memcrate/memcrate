@@ -21,19 +21,22 @@ After deciding the destination, restate which file you're about to edit before t
 
 **Prefer your file-reading tools over shell commands where you have them.** They produce clean permission prompts with full paths visible.
 
-Try in order:
+Memcrate set up your vault at: `{{MEMCRATE_VAULT}}`
 
-1. **Read `~/memcrate-vault/Core/Context/Profile.md`** - the default install location. If it returns content, `<vault>` = `~/memcrate-vault`.
+Try in order. The first read that returns content ends the search, and `<vault>` is the folder that holds its `Core/`. If a step fails, including a read that is blocked or not found, move to the next step instead of stopping.
+
+1. **Read `<recorded path>/Core/Context/Profile.md`**, where `<recorded path>` is the path on the "Memcrate set up your vault at" line above. If that line still shows a placeholder in double curly braces instead of a path (the skill was copied by hand), skip this step.
 2. **Read `<cwd>/Core/Context/Profile.md`** - handles users who `cd`'d into their vault before launching the tool. Use the absolute working-directory path from your session context.
-3. **Depth-1 scan of the home directory** for `*/Core/Context/Profile.md`, which finds vaults at custom paths like `~/myvault`. Resolve `<home>` from your session context (typically `/home/<user>` on Linux, `/Users/<user>` on macOS, `C:\Users\<user>` on Windows).
+3. **Read `<home>/memcrate-vault/Core/Context/Profile.md`** - the default install location. Take `<home>` from the environment, never from the working directory or a username: `echo "$HOME"` in a POSIX shell (macOS, Linux, Git Bash), `$env:USERPROFILE` in PowerShell. On Windows, pass the Read tool a Windows path (`C:\...`), converting a Git Bash path such as `/c/Users/...` with `cygpath -w` if needed.
+4. **Depth-1 scan of the home directory** for `*/Core/Context/Profile.md`, which finds vaults at custom paths like `~/myvault`. Use the `<home>` from step 3.
     - **If you have a Glob tool** (Claude Code, Claude Desktop): Glob with `path: <home>` and `pattern: "*/Core/Context/Profile.md"`.
     - **Otherwise** (Codex, or any shell-only tool): run `ls -d "$HOME"/*/Core/Context/Profile.md 2>/dev/null`. Use `$HOME` literally so the shell resolves it; do not substitute a path you guessed.
     - **One match** → `<vault>` is the first path segment of that match (strip `/Core/Context/Profile.md`).
     - **Multiple matches** → list them and ask the user which to use.
 
-If all three fail, ask the user in plain English:
+If every step fails, ask the user in plain English:
 
-> I couldn't find a Memcrate vault at `~/memcrate-vault`, in this directory, or anywhere one level deep in your home directory. Where is your vault? (Paste the absolute path. If you haven't set one up yet, run `memcrate` and try again.)
+> I couldn't find a Memcrate vault at the path Memcrate recorded, at `~/memcrate-vault`, in this directory, or anywhere one level deep in your home directory. Where is your vault? (Paste the absolute path. If you haven't set one up yet, run `memcrate` and try again.)
 
 Then `Read <answer>/Core/Context/Profile.md` to confirm before proceeding.
 
