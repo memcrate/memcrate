@@ -102,11 +102,6 @@ SCRATCH="$WORK/home"
 mkdir "$SCRATCH"
 AGENT_HOME="$(native "$SCRATCH")"
 VAULT="$SCRATCH/memcrate-vault"
-# Windows Claude Code rejects ~ paths, so the load skill would guess the home folder from
-# the cwd and miss this scratch home. Starting inside the vault lets the skill find it
-# directly until the skills resolve home on Windows themselves.
-CLAUDE_CWD="$SCRATCH"
-if [ "$WINDOWS" = 1 ]; then CLAUDE_CWD="$VAULT"; fi
 STEP=""
 OUT=""
 
@@ -149,6 +144,8 @@ fail() {
 
 SKILLS="$SCRATCH/.claude/skills"
 if [ "$TOOL" = codex ]; then SKILLS="$SCRATCH/.codex/skills"; fi
+LOAD_SKILL=load
+if [ "$MODE" = prefixed ]; then LOAD_SKILL=memcrate-load; fi
 
 if [ "$MODE" = prefixed ]; then
     echo "==> planting a foreign save skill for $TOOL"
@@ -167,6 +164,11 @@ fi
 
 echo "==> installing memcrate into a scratch home"
 in_home "$BIN" --yes >/dev/null
+# memcrate writes the path with single separators; macOS mktemp can return a doubled slash.
+RECORDED="$(native "$VAULT")"
+if [ "$WINDOWS" = 0 ]; then RECORDED="$(printf '%s' "$RECORDED" | tr -s /)"; fi
+grep -F "\`$RECORDED\`" "$SKILLS/$LOAD_SKILL/SKILL.md" >/dev/null ||
+    fail "memcrate did not record the vault path in the installed $LOAD_SKILL skill for $TOOL"
 
 if [ "$MODE" = prefixed ]; then
     for verb in load pin save; do
@@ -251,7 +253,7 @@ run_agent() {
             # --bare means API-key auth only and no Skill tool, so prompts call skills as /commands.
             # Claude Code fences file access to its working directory, hence the cd.
             (
-                cd "$CLAUDE_CWD" &&
+                cd "$SCRATCH" &&
                     in_home claude --bare \
                         --add-dir "$AGENT_HOME" \
                         --permission-mode acceptEdits \
@@ -321,8 +323,6 @@ session_logs() {
 
 outside_vault >"$WORK/outside-before.txt"
 
-LOAD_SKILL=load
-if [ "$MODE" = prefixed ]; then LOAD_SKILL=memcrate-load; fi
 if [ "$TOOL" = claude ]; then
     LOAD_PROMPT="/$LOAD_SKILL"
 elif [ "$MODE" = prefixed ]; then

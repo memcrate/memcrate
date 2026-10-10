@@ -133,7 +133,7 @@ slash (`/load`); Codex uses a leading dollar sign (`$load`). The three verbs:
 - **`/pin <insight>`** promotes a fact into `Profile.md`, `Projects.md`, or `Current State.md` so it survives across sessions.
 - **`/save`** writes a session log to `Core/Sessions/` so the next `/load` picks up where you left off.
 
-The skills find your vault by reading `~/memcrate-vault/Core/Context/Profile.md`, then the current directory, then a depth-1 scan of your home directory. If nothing matches, `/load` asks you where it is.
+Setup writes your vault's full path into the installed skills, so they read it from there first. If that misses, they try the current directory, then `~/memcrate-vault`, then a depth-1 scan of your home directory. If nothing matches, `/load` asks you where it is.
 
 ### Skills you already own
 

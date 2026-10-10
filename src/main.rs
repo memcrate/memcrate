@@ -140,11 +140,12 @@ fn run(cli: Cli) -> Result<()> {
     println!();
 
     // One tool failing should not cost the user the other one.
+    let recorded = absolute(&vault)?;
     let mut installed: Vec<(Tool, SkillSet)> = Vec::new();
     let mut problems: Vec<String> = Vec::new();
     for tool in Tool::All.expand() {
         let dest = tool.skills_dir()?;
-        match install_skills(tool, &dest, true) {
+        match install_skills(tool, &dest, &recorded, true) {
             Ok(set) => installed.push((tool, set)),
             Err(e) => problems.push(format!("{}: {}", tool.label(), first_line(&e.to_string()))),
         }
@@ -374,6 +375,18 @@ fn expand_home(input: &str) -> Result<PathBuf> {
     Ok(PathBuf::from(trimmed))
 }
 
+/// Rebuilding from components drops `.` and writes Windows separators as `\`.
+fn absolute(path: &Path) -> Result<PathBuf> {
+    let full = if path.is_absolute() {
+        path.to_path_buf()
+    } else {
+        std::env::current_dir()
+            .context("Cannot resolve the current directory")?
+            .join(path)
+    };
+    Ok(full.components().collect())
+}
+
 fn main() -> Result<()> {
     let cli = Cli::parse();
     match cli.command {
@@ -438,6 +451,7 @@ fn skill_names() -> Vec<String> {
 }
 
 const SKILL_PREFIX: &str = "memcrate-";
+const VAULT_PLACEHOLDER: &str = "{{MEMCRATE_VAULT}}";
 
 /// Which names a tool's skills went in under.
 #[derive(Debug, PartialEq, Eq)]
@@ -513,10 +527,20 @@ fn prefix_skill_md(text: &str) -> String {
     prefix_commands(&out)
 }
 
-fn write_skill(dir: &Dir, root: &Path, target: &Path, prefixed: bool) -> Result<()> {
+fn render_skill_md(text: &str, prefixed: bool, vault: &Path) -> String {
+    let text = if prefixed {
+        prefix_skill_md(text)
+    } else {
+        text.to_string()
+    };
+    // Filled in after prefixing, so a vault path such as /save is never rewritten.
+    text.replace(VAULT_PLACEHOLDER, &vault.display().to_string())
+}
+
+fn write_skill(dir: &Dir, root: &Path, target: &Path, prefixed: bool, vault: &Path) -> Result<()> {
     fs::create_dir_all(target).with_context(|| format!("Failed to create {}", target.display()))?;
     for sub in dir.dirs() {
-        write_skill(sub, root, target, prefixed)?;
+        write_skill(sub, root, target, prefixed, vault)?;
     }
     for file in dir.files() {
         let rel = file.path().strip_prefix(root).unwrap_or(file.path());
@@ -526,8 +550,8 @@ fn write_skill(dir: &Dir, root: &Path, target: &Path, prefixed: bool) -> Result<
                 .with_context(|| format!("Failed to create {}", parent.display()))?;
         }
         let contents = match file.contents_utf8() {
-            Some(text) if prefixed && rel == Path::new("SKILL.md") => {
-                prefix_skill_md(text).into_bytes()
+            Some(text) if rel == Path::new("SKILL.md") => {
+                render_skill_md(text, prefixed, vault).into_bytes()
             }
             _ => file.contents().to_vec(),
         };
@@ -555,7 +579,7 @@ fn owns_skill(dest: &Path, name: &str) -> bool {
     is_memcrate_skill(&dest.join(name))
 }
 
-fn install_skills(tool: Tool, dest: &Path, force: bool) -> Result<SkillSet> {
+fn install_skills(tool: Tool, dest: &Path, vault: &Path, force: bool) -> Result<SkillSet> {
     fs::create_dir_all(dest).with_context(|| format!("Failed to create {}", dest.display()))?;
 
     let verbs = skill_names();
@@ -621,7 +645,7 @@ fn install_skills(tool: Tool, dest: &Path, force: bool) -> Result<SkillSet> {
             "Installed by Memcrate. Safe for memcrate to replace.\n",
         )
         .with_context(|| format!("Failed to write {}", marker.display()))?;
-        write_skill(skill, skill.path(), &target, prefixed)?;
+        write_skill(skill, skill.path(), &target, prefixed, vault)?;
     }
 
     // Marker only here: a user's own plain skill may mention memcrate.
@@ -1037,6 +1061,54 @@ mod tests {
         assert_eq!(names, vec!["load", "pin", "save"]);
     }
 
+    const TEST_VAULT: &str = "/srv/vaults/memcrate-vault";
+
+    #[test]
+    fn bundled_skills_carry_one_vault_placeholder() {
+        for verb in ["load", "pin", "save"] {
+            assert_eq!(
+                bundled(verb).matches(VAULT_PLACEHOLDER).count(),
+                1,
+                "{}",
+                verb
+            );
+        }
+    }
+
+    #[test]
+    fn render_fills_in_the_vault_path_for_both_sets() {
+        let text = "---\r\nname: load\r\n---\r\nMemcrate set up your vault at: `{{MEMCRATE_VAULT}}`\r\nRun /save.\r\n";
+        let windows = Path::new(r"D:\My Vaults\memcrate-vault");
+        assert_eq!(
+            render_skill_md(text, false, windows),
+            "---\r\nname: load\r\n---\r\nMemcrate set up your vault at: `D:\\My Vaults\\memcrate-vault`\r\nRun /save.\r\n"
+        );
+        // A vault path that looks like a command must not be rewritten.
+        assert_eq!(
+            render_skill_md(text, true, Path::new("/save")),
+            "---\r\nname: memcrate-load\r\n---\r\nMemcrate set up your vault at: `/save`\r\nRun /memcrate-save.\r\n"
+        );
+    }
+
+    #[test]
+    fn recorded_vault_path_is_absolute() {
+        let cwd = std::env::current_dir().unwrap();
+        assert_eq!(absolute(Path::new("notes")).unwrap(), cwd.join("notes"));
+        assert_eq!(absolute(Path::new("./notes")).unwrap(), cwd.join("notes"));
+        #[cfg(not(windows))]
+        assert_eq!(
+            absolute(Path::new("/a/./b/")).unwrap(),
+            PathBuf::from("/a/b")
+        );
+        #[cfg(windows)]
+        assert_eq!(
+            absolute(Path::new("D:/vaults/./notes"))
+                .unwrap()
+                .to_string_lossy(),
+            r"D:\vaults\notes"
+        );
+    }
+
     fn bundled(verb: &str) -> String {
         AGENT_SKILLS
             .get_file(format!("{}/SKILL.md", verb))
@@ -1078,16 +1150,16 @@ mod tests {
     fn clean_dir_gets_the_plain_set() {
         let dest = tmp("skills-clean");
         assert_eq!(
-            install_skills(Tool::ClaudeCode, &dest, true).unwrap(),
+            install_skills(Tool::ClaudeCode, &dest, Path::new(TEST_VAULT), true).unwrap(),
             SkillSet::Plain
         );
         for verb in ["load", "pin", "save"] {
             let dir = dest.join(verb);
             assert!(dir.join(SKILL_MARKER).exists());
-            assert_eq!(
-                fs::read_to_string(dir.join("SKILL.md")).unwrap(),
-                bundled(verb)
-            );
+            let text = fs::read_to_string(dir.join("SKILL.md")).unwrap();
+            assert_eq!(text, bundled(verb).replace(VAULT_PLACEHOLDER, TEST_VAULT));
+            assert!(text.contains(&format!("`{}`", TEST_VAULT)));
+            assert!(!text.contains(VAULT_PLACEHOLDER));
             assert!(!dest.join(format!("memcrate-{}", verb)).exists());
         }
     }
@@ -1097,7 +1169,7 @@ mod tests {
         let dest = tmp("skills-own-save");
         let theirs = own_skill(&dest, "save");
         assert_eq!(
-            install_skills(Tool::ClaudeCode, &dest, true).unwrap(),
+            install_skills(Tool::ClaudeCode, &dest, Path::new(TEST_VAULT), true).unwrap(),
             SkillSet::Prefixed(vec!["save".to_string()])
         );
         assert_eq!(
@@ -1114,6 +1186,8 @@ mod tests {
             // Windows checkouts embed the bundled skills with CRLF.
             let name = format!("name: memcrate-{}", verb);
             assert!(text.lines().any(|l| l == name));
+            assert!(text.contains(&format!("`{}`", TEST_VAULT)));
+            assert!(!text.contains(VAULT_PLACEHOLDER));
             for token in ["/load", "/pin", "/save", "$load", "$pin", "$save"] {
                 assert!(!text.contains(token), "{} still has {}", verb, token);
             }
@@ -1129,7 +1203,7 @@ mod tests {
         owned_skill(&dest, "save");
         let theirs = own_skill(&dest, "load");
         assert_eq!(
-            install_skills(Tool::Codex, &dest, true).unwrap(),
+            install_skills(Tool::Codex, &dest, Path::new(TEST_VAULT), true).unwrap(),
             SkillSet::Prefixed(vec!["load".to_string()])
         );
         assert!(!dest.join("pin").exists());
@@ -1154,7 +1228,7 @@ mod tests {
         fs::create_dir_all(dest.join("load")).unwrap();
         fs::write(dest.join("load").join("SKILL.md"), load).unwrap();
         assert_eq!(
-            install_skills(Tool::ClaudeCode, &dest, true).unwrap(),
+            install_skills(Tool::ClaudeCode, &dest, Path::new(TEST_VAULT), true).unwrap(),
             SkillSet::Prefixed(vec!["save".to_string()])
         );
         assert_eq!(
@@ -1181,7 +1255,7 @@ mod tests {
             owned_skill(&dest, &format!("memcrate-{}", verb));
         }
         assert_eq!(
-            install_skills(Tool::ClaudeCode, &dest, true).unwrap(),
+            install_skills(Tool::ClaudeCode, &dest, Path::new(TEST_VAULT), true).unwrap(),
             SkillSet::Plain
         );
         for verb in ["load", "pin", "save"] {
@@ -1204,7 +1278,7 @@ mod tests {
         owned_skill(&dest, "pin");
         owned_skill(&dest, "memcrate-pin");
         let before = snapshot(&dest);
-        let err = install_skills(Tool::ClaudeCode, &dest, true)
+        let err = install_skills(Tool::ClaudeCode, &dest, Path::new(TEST_VAULT), true)
             .unwrap_err()
             .to_string();
         assert!(first_line(&err).contains("save, memcrate-load"));

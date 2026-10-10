@@ -94,6 +94,19 @@ fn bundled_skill(verb: &str) -> String {
     fs::read_to_string(path).unwrap()
 }
 
+fn installed_skill(home: &Home, tool: &str, name: &str) -> String {
+    fs::read_to_string(home.path(tool).join("skills").join(name).join("SKILL.md")).unwrap()
+}
+
+// The same normalization memcrate applies before writing the path into the skills.
+fn recorded(vault: &Path) -> String {
+    vault
+        .components()
+        .collect::<PathBuf>()
+        .display()
+        .to_string()
+}
+
 fn assert_skills(home: &Home, tool: &str, prefix: &str) {
     for verb in VERBS {
         let dir = home
@@ -183,8 +196,43 @@ fn second_run_reuses_the_vault_and_refreshes_skills() {
     let out = home.run(&["--yes"]);
     assert!(out.status.success(), "{}", stderr(&out));
     assert!(stdout(&out).contains("Using the existing vault at"));
-    assert_eq!(fs::read_to_string(&stale).unwrap(), bundled_skill("load"));
+    let vault = recorded(&home.path("memcrate-vault"));
+    assert_eq!(
+        fs::read_to_string(&stale).unwrap(),
+        bundled_skill("load").replace("{{MEMCRATE_VAULT}}", &vault)
+    );
     assert_eq!(fs::read_to_string(&profile).unwrap(), "My own notes.\n");
+}
+
+#[test]
+fn skills_record_the_vault_path_and_follow_a_new_one() {
+    let home = Home::new("recorded");
+    let first = home.path("first vault");
+    let second = home.path("second vault");
+
+    let out = home.run(&["--yes", "--vault", &first.display().to_string()]);
+    assert!(out.status.success(), "{}", stderr(&out));
+    for tool in [".claude", ".codex"] {
+        let text = installed_skill(&home, tool, "load");
+        assert!(
+            text.contains(&format!("`{}`", recorded(&first))),
+            "{}",
+            text
+        );
+        assert!(!text.contains("{{MEMCRATE_VAULT}}"));
+    }
+
+    let out = home.run(&["--yes", "--vault", &second.display().to_string()]);
+    assert!(out.status.success(), "{}", stderr(&out));
+    for tool in [".claude", ".codex"] {
+        let text = installed_skill(&home, tool, "load");
+        assert!(
+            text.contains(&format!("`{}`", recorded(&second))),
+            "{}",
+            text
+        );
+        assert!(!text.contains(&recorded(&first)), "{}", text);
+    }
 }
 
 #[test]
