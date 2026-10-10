@@ -100,10 +100,13 @@ STEP=""
 OUT=""
 
 # Windows tools read USERPROFILE; a set CLAUDE_CONFIG_DIR or CODEX_HOME would reach your real config.
+# Git Bash rewrites any argument starting with / (such as /load) into a Windows
+# path; every path passed here already went through native(), so turn that off.
 in_home() {
     env -u CLAUDE_CONFIG_DIR -u "$OTHER_KEY" \
         HOME="$AGENT_HOME" USERPROFILE="$AGENT_HOME" \
         CODEX_HOME="$(native "$SCRATCH/.codex")" \
+        MSYS_NO_PATHCONV=1 MSYS2_ARG_CONV_EXCL='*' \
         "$@"
 }
 
@@ -289,13 +292,15 @@ frontmatter() {
 
 last_updated() { frontmatter "$1" | grep '^last_updated:' || true; }
 
-# The agent CLIs keep their own state here; nothing else outside the vault may appear or vanish.
+# The agent CLIs, and Windows app data (PowerShell, which Codex uses there), keep their own state
+# here; nothing else outside the vault may appear or vanish.
 outside_vault() {
     (cd "$SCRATCH" && find . \
         -path ./memcrate-vault -prune -o \
         -path ./.claude -prune -o \
         -path './.claude.json*' -prune -o \
         -path ./.codex -prune -o \
+        -path ./AppData -prune -o \
         -print) | LC_ALL=C sort
 }
 

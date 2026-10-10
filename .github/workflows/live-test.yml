@@ -51,6 +51,11 @@ jobs:
         if: matrix.tool == 'claude'
         run: npm install -g @anthropic-ai/claude-code
 
+      # Ubuntu 24.04 blocks the unprivileged user namespaces Codex's bubblewrap sandbox needs.
+      - name: Allow sandbox user namespaces
+        if: runner.os == 'Linux' && matrix.tool == 'codex'
+        run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+
       - name: Live test
         shell: bash
         # Each job gets only the key for the tool it tests.
