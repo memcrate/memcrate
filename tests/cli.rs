@@ -380,3 +380,19 @@ fn version_matches_the_crate() {
         format!("memcrate {}", env!("CARGO_PKG_VERSION"))
     );
 }
+
+// The npm wrapper downloads the release matching its own version.
+#[test]
+fn npm_wrapper_version_matches_the_crate() {
+    let pkg =
+        fs::read_to_string(Path::new(env!("CARGO_MANIFEST_DIR")).join("npm/package.json")).unwrap();
+    let line = pkg
+        .lines()
+        .find(|l| l.trim_start().starts_with("\"version\":"))
+        .expect("npm/package.json has no version");
+    assert_eq!(
+        line.split('"').nth(3),
+        Some(env!("CARGO_PKG_VERSION")),
+        "bump npm/package.json together with Cargo.toml"
+    );
+}
