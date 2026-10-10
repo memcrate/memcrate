@@ -102,6 +102,11 @@ SCRATCH="$WORK/home"
 mkdir "$SCRATCH"
 AGENT_HOME="$(native "$SCRATCH")"
 VAULT="$SCRATCH/memcrate-vault"
+# Windows Claude Code rejects ~ paths, so the load skill would guess the home folder from
+# the cwd and miss this scratch home. Starting inside the vault lets the skill find it
+# directly until the skills resolve home on Windows themselves.
+CLAUDE_CWD="$SCRATCH"
+if [ "$WINDOWS" = 1 ]; then CLAUDE_CWD="$VAULT"; fi
 STEP=""
 OUT=""
 
@@ -246,7 +251,7 @@ run_agent() {
             # --bare means API-key auth only and no Skill tool, so prompts call skills as /commands.
             # Claude Code fences file access to its working directory, hence the cd.
             (
-                cd "$SCRATCH" &&
+                cd "$CLAUDE_CWD" &&
                     in_home claude --bare \
                         --add-dir "$AGENT_HOME" \
                         --permission-mode acceptEdits \
