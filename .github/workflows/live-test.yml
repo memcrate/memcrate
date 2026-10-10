@@ -1,24 +1,38 @@
 name: Live agent test
 
-# Manual only. This one starts a real agent session, so it costs money, needs
-# network, and its answer is worded differently every run. Keeping it off push
-# and pull_request means an outside contributor never sees a red X they have no
-# API key to fix. Run it before tagging a release.
+# Manual only. This one starts real agent sessions, so it costs money, needs
+# network, and its answers are worded differently every run. Keeping it off
+# push and pull_request means an outside contributor never sees a red X they
+# have no API key to fix. Run it before tagging a release.
 on:
   workflow_dispatch:
     inputs:
       tool:
         description: Which tool to test
         type: choice
-        default: codex
-        options: [codex, claude]
+        default: all
+        options: [all, claude, codex]
 
 permissions:
   contents: read
 
 jobs:
   live-test:
-    runs-on: ubuntu-latest
+    name: ${{ matrix.tool }} ${{ matrix.mode }} (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        tool: ${{ fromJSON(inputs.tool == 'all' && '["claude", "codex"]' || format('["{0}"]', inputs.tool)) }}
+        mode: [plain, prefixed]
+        # tests/cli.rs covers the prefixed install on every OS; one live run is enough.
+        exclude:
+          - os: macos-latest
+            mode: prefixed
+          - os: windows-latest
+            mode: prefixed
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -30,15 +44,19 @@ jobs:
         uses: Swatinem/rust-cache@v2
 
       - name: Install Codex
-        if: inputs.tool == 'codex'
+        if: matrix.tool == 'codex'
         run: npm install -g @openai/codex
 
       - name: Install Claude Code
-        if: inputs.tool == 'claude'
+        if: matrix.tool == 'claude'
         run: npm install -g @anthropic-ai/claude-code
 
       - name: Live test
+        shell: bash
+        # Each job gets only the key for the tool it tests.
         env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-        run: ./scripts/live-test.sh ${{ inputs.tool }}
+          # Cheapest current model; it passes every step. Override for a release check on a bigger model.
+          LIVE_TEST_CLAUDE_MODEL: claude-haiku-5-5
+          OPENAI_API_KEY: ${{ matrix.tool == 'codex' && secrets.OPENAI_API_KEY || '' }}
+          ANTHROPIC_API_KEY: ${{ matrix.tool == 'claude' && secrets.ANTHROPIC_API_KEY || '' }}
+        run: bash scripts/live-test.sh ${{ matrix.tool }} ${{ matrix.mode }}
