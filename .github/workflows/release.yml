@@ -9,8 +9,29 @@ permissions:
   contents: write
 
 jobs:
+  # A crates.io publish cannot be undone, so nothing builds until every version agrees.
+  versions:
+    name: versions match the tag
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check Cargo.toml and npm/package.json against the tag
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          crate=$(grep -m1 '^version = ' Cargo.toml | cut -d'"' -f2)
+          pkg=$(node -p "require('./npm/package.json').version")
+          if [ "$tag" != "$crate" ] || [ "$tag" != "$pkg" ]; then
+            echo "tag $tag, Cargo.toml $crate, and npm/package.json $pkg must all match"
+            exit 1
+          fi
+
   build:
     name: build (${{ matrix.target }})
+    needs: versions
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -106,15 +127,6 @@ jobs:
         with:
           node-version: '20'
           registry-url: 'https://registry.npmjs.org'
-
-      - name: Check npm/package.json version matches the tag
-        run: |
-          tag="${GITHUB_REF_NAME#v}"
-          pkg=$(node -p "require('./npm/package.json').version")
-          if [ "$tag" != "$pkg" ]; then
-            echo "tag $tag does not match npm/package.json version $pkg"
-            exit 1
-          fi
 
       - name: Publish
         if: ${{ env.NODE_AUTH_TOKEN != '' }}
