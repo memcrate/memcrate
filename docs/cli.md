@@ -120,7 +120,8 @@ Shipped today:
 - **Cargo:** `cargo install memcrate` - for anyone with a Rust toolchain (also the path for Intel Macs).
 - **curl-pipe-sh (Linux / Apple Silicon macOS):** `curl -fsSL https://raw.githubusercontent.com/memcrate/memcrate/main/install.sh | sh`
 - **PowerShell (Windows):** `irm https://raw.githubusercontent.com/memcrate/memcrate/main/install.ps1 | iex`
-- **GitHub Releases:** prebuilt binaries for `x86_64-unknown-linux-gnu`, `aarch64-apple-darwin`, `x86_64-pc-windows-msvc`, each with a `.sha256` alongside. Tag push builds and publishes automatically (GitHub Releases + crates.io).
+- **npm:** `npm install -g memcrate` - a wrapper that downloads the matching prebuilt binary on install.
+- **GitHub Releases:** prebuilt binaries for `x86_64-unknown-linux-gnu`, `aarch64-apple-darwin`, `x86_64-pc-windows-msvc`, each with a `.sha256` alongside. Tag push builds and publishes automatically (GitHub Releases, npm, then crates.io).
 
 Planned:
 

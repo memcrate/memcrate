@@ -91,12 +91,48 @@ jobs:
           generate_release_notes: true
           fail_on_unmatched_files: true
 
-  publish-crate:
-    name: publish to crates.io
+  # Both registries trust this workflow through OIDC, so the repo holds no publish tokens.
+  publish-npm:
+    name: publish to npm
+    # Runs after the release assets exist, since the wrapper downloads them.
     needs: build
     runs-on: ubuntu-latest
     # Skip pre-releases (tags containing a hyphen, e.g. v0.4.0-rc.1)
     if: ${{ !contains(github.ref_name, '-') }}
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Trusted publishing needs npm 11.5.1 or later, which Node 24 bundles.
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          registry-url: 'https://registry.npmjs.org'
+
+      # Skips a version npm already has, so rerunning a half-finished release still reaches crates.io.
+      - name: Publish
+        working-directory: npm
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          if npm view "memcrate@$version" version >/dev/null 2>&1; then
+            echo "memcrate $version is already on npm."
+          else
+            npm publish --access public
+          fi
+
+  publish-crate:
+    name: publish to crates.io
+    # Last, because a crates.io publish cannot be undone.
+    needs: publish-npm
+    runs-on: ubuntu-latest
+    if: ${{ !contains(github.ref_name, '-') }}
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -107,36 +143,11 @@ jobs:
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
 
+      - name: Get a crates.io publish token
+        id: auth
+        uses: rust-lang/crates-io-auth-action@v1
+
       - name: cargo publish
         run: cargo publish --locked
         env:
-          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
-
-  publish-npm:
-    name: publish to npm
-    # Runs after the release assets exist, since the wrapper downloads them.
-    needs: build
-    runs-on: ubuntu-latest
-    if: ${{ !contains(github.ref_name, '-') }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          registry-url: 'https://registry.npmjs.org'
-
-      - name: Publish
-        if: ${{ env.NODE_AUTH_TOKEN != '' }}
-        working-directory: npm
-        run: npm publish --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-
-      - name: Note when no token is configured
-        if: ${{ env.NODE_AUTH_TOKEN == '' }}
-        run: echo "NPM_TOKEN is not set; skipping npm publish."
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
